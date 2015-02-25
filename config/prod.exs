@@ -1,10 +1,5 @@
 use Mix.Config
 
-config :brahma_chat, BrahmaChat.Endpoint,
-  url: [host: "example.com"],
-  http: [port: System.get_env("PORT")],
-  secret_key_base: "uVymdj8bG0rgYid3ds8IgK1x7MhmT/jdKJf2B7mY1XUyJG/Xq4EhosAHe023vfNP"
-  
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key
@@ -18,10 +13,6 @@ config :brahma_chat, BrahmaChat.Endpoint,
 #
 # Where those two env variables point to a file on
 # disk for the key and cert.
-  
-
-# Do not pring debug messages in production
-config :logger, level: :info
 
 # ## Using releases
 #
@@ -35,3 +26,11 @@ config :logger, level: :info
 #
 #     config :brahma_chat, BrahmaChat.Endpoint, server: true
 #
+
+config :brahma_chat, BrahmaChat.Endpoint,
+  url: [host: "example.com"],
+  http: [port: System.get_env("PORT")],
+  secret_key_base: "uVymdj8bG0rgYid3ds8IgK1x7MhmT/jdKJf2B7mY1XUyJG/Xq4EhosAHe023vfNP"
+
+# Do not pring debug messages in production
+config :logger, level: :info

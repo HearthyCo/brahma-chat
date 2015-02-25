@@ -1,11 +1,8 @@
 defmodule BrahmaChat.Router do
   use Phoenix.Router
 
-  pipeline :browser do
-    plug :accepts, ~w(html)
-    plug :fetch_session
-    plug :fetch_flash
-    plug :protect_from_forgery
+  socket "/ws", Chat do
+    channel "sessions:*", SessionChannel
   end
 
   pipeline :api do
@@ -13,13 +10,8 @@ defmodule BrahmaChat.Router do
   end
 
   scope "/", BrahmaChat do
-    pipe_through :browser # Use the default browser stack
+    pipe_through :api # Use the default browser stack
 
     get "/", PageController, :index
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", BrahmaChat do
-  #   pipe_through :api
-  # end
 end

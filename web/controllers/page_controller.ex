@@ -4,6 +4,6 @@ defmodule BrahmaChat.PageController do
   plug :action
 
   def index(conn, _params) do
-    render conn, "index.html"
+    render conn, "index.json"
   end
 end
