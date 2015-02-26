@@ -1,0 +1,19 @@
+{
+  "name": "brahma-chat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/app.coffee",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/app.coffee"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.com:brahma/brahma-chat.git"
+  },
+  "author": "Ignacio Lago <ignacio@glue.gl>",
+  "license": "ISC",
+  "dependencies": {
+    "websocket": "^1.0.17"
+  }
+}
