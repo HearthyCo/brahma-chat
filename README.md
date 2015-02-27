@@ -6,6 +6,7 @@
 #### Request
 ```
 {
+	"id": String,
 	"type": String,
 	"session": null | String,
 	"data": Object
@@ -14,6 +15,7 @@
 #### Response
 ```
 {
+	"id": null | String,
 	"type": String,
 	"status": Integer,
 	"session": null | String,
@@ -24,6 +26,7 @@
 #### Handshake
 ```
 {
+	"id": String,
 	"type": "handshake",
 	"session": null,
 	"data": {
@@ -37,6 +40,7 @@
 #### Message
 ```
 {
+	"id": String,
 	"type": "message",
 	"session": String,
 	"data": {
@@ -47,6 +51,7 @@
 #### Attachment
 ```
 {
+	"id": String,
 	"type": "attachment",
 	"session": String,
 	"data": {
@@ -60,6 +65,7 @@
 #### Ping
 ```
 {
+	"id": String,
 	"type": "ping"
 }
 ```
@@ -67,6 +73,7 @@
 #### Status, Error
 ```
 {
+	"id": null | String,
 	"type": "status",
 	"status": Integer,
 	"session": null | String,
@@ -78,6 +85,7 @@
 #### Pong
 ```
 {
+	"id": String,
 	"type": "pong"
 }
 ```

@@ -11,7 +11,7 @@ statusCodes = {
   4080: 'Request Timeout'
 }
 
-sendStatus = (code, session, message) ->
+sendStatus = (code, id, session, message) ->
   status = statusCodes[code]
 
   if not status
@@ -19,6 +19,7 @@ sendStatus = (code, session, message) ->
     status = 'Internal Server Error'
 
   statusObject =
+    id: id or null
     type: 'status'
     status: code
     session: session or null
