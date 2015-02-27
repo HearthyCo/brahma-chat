@@ -2,13 +2,14 @@
 
 WebSocketServer = require('websocket').server
 redis = require 'redis'
+amqp = require 'amqp'
 http = require 'http'
 wsUtils = require './lib/utils'
 papersPlease = require './lib/papersPlease'
 sendStatus = require './lib/sendStatus'
 
 ###
-  REDIS
+  REDIS -------------------------------------------------------------
 ###
 redisClient = redis.createClient()
 # if you'd like to select database 3, instead of 0 (default), call
@@ -21,7 +22,23 @@ redisClient.on 'connect', ->
   return
 
 ###
-  CONFIG
+  AMQP --------------------------------------------------------------
+###
+amqpClient = amqp.createConnection()
+
+# Wait for connection to become established.
+amqpClient.on 'ready', ->
+  # Use the default 'amq.topic' exchange
+  connection.queue 'join', (q) ->
+    console.error 'AMQP queue: join'
+    # Catch all messages
+    q.bind '#'
+
+    q.subscribe (message) ->
+      console.log 'AMQP message:' + message
+
+###
+  CONFIG ------------------------------------------------------------
 ###
 config =
   port: 1337
@@ -30,7 +47,7 @@ config =
     professional: [ 'red', 'green', 'blue' ]
 
 ###
-  INTERNAL DB
+  INTERNAL DB -------------------------------------------------------
 ###
 
 # list of currently connected clients (users)
@@ -40,7 +57,7 @@ users = {}
 sessions = {}
 
 ###
-  WEBSOCKETS
+  WEBSOCKETS --------------------------------------------------------
 ###
 
 server = http.createServer (request, response) ->
