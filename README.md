@@ -1,4 +1,6 @@
 # Brahma Chat
+## Websockets
+Refer to [socket.io](http://socket.io/) for technical stuff.
 
 ## Protocol
 
