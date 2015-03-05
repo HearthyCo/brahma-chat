@@ -87,87 +87,98 @@ wsServer.on 'request', (request) ->
   index = clients.push(connection) - 1
 
   # User data initialization
-  user = {
+  user =
     role: 'client'
     id: null
     name: null
     sessions: {}
     auth: false
-  }
 
   connection.sendUTF JSON.stringify
     type: 'message'
     data: message: "Hello =)"
 
   console.log (new Date()) + ' Connection accepted.'
+  console.log connection.on
 
-  connection.on 'message', (message) ->
-    if message.type == 'utf8'
-
-      # JSON message
+  connection.on 'message', (messageString) ->
+    console.log 'messageString', messageString
+    if messageString.type == 'utf8'
+      message
+      # JSON messageString
       try
-        objectData = JSON.parse message.utf8Data
+        messageData = JSON.parse messageString.utf8Data
       catch e
         return connection.sendUTF sendStatus 4000
 
+      # Convert into array
+      messages = messageData.messages
+      if Object.prototype.toString.call messages isnt '[object Array]'
+        messages = [messages]
 
-      # first message must be json with information
-      if not user.name and objectData.type isnt "handshake" and objectData.type isnt "ping"
-        return connection.sendUTF sendStatus 4010
+      for message in messages
+        # first messageString must be json with information
+        if not user.name and message.type isnt "handshake" and message.type isnt "ping"
+          return connection.sendUTF sendStatus 4010
 
-      # message id
-      id = objectData.id + ''
-      delete objectData.id
+        # messageString id
+        id = message.id + ''
+        delete message.id
 
-      # check if message is valid
-      if !papersPlease.message objectData
-        return connection.sendUTF sendStatus 4030, id
+        # check if messageString is valid
+        if !papersPlease.message message
+          return connection.sendUTF sendStatus 4030, id
 
-      # milliseconds
-      objectData.timestamp = Date.now()
-      objectData.from = user.id
+        # milliseconds
+        message.timestamp = Date.now()
+        message.from = user.id
 
-      # do something with it
-      switch objectData.type
-        when 'ping'
-          connection.sendUTF JSON.stringify { id: id, type: "pong" }
-          console.log (new Date()) + ' PING? PONG'
+        # do something with it
+        switch message.type
+          when 'ping'
+            console.log 'IS PING', message
+            connection.sendUTF JSON.stringify { id: id, type: "pong" }
+            console.log (new Date()) + ' PING? PONG'
 
-        when 'handshake'
-          user = objectData.data.user
-          connection.sendUTF JSON.stringify sendStatus 2000, id
+          when 'handshake'
+            console.log 'IS HANDSHAKE', message
+            user = message.data.user
+            connection.sendUTF JSON.stringify sendStatus 2000, id
 
-        when 'message'
-          if objectData.session
-            redisClient.rpush ('session_' + objectData.session), JSON.stringify objectData
+          when 'message'
+            console.log 'IS MESSAGE', message
+            if message.session
+              redisClient.rpush ('session_' + message.session), JSON.stringify message
 
-            if not sessions[objectData.session]
-              sessions[objectData.session] = []
+              if not sessions[message.session]
+                sessions[message.session] = []
 
-            for listener in sessions[objectData.session]
-              listener.sendUTF JSON.stringify objectData
-            redisClient.lrange ('session_' + objectData.session), 0, 1000, (err, reply) ->
-              console.log 'REDIS ERROR: ' + err
-              console.log 'REDIS: ' + reply
-            console.log (new Date()) + ' Received Message: ' + message.utf8Data
+              for listener in sessions[message.session]
+                listener.sendUTF JSON.stringify message
 
-        when 'attachment'
-          if objectData.session
-            redisClient.rpush ('session_' + objectData.session), JSON.stringify objectData
+              redisClient.lrange ('session_' + message.session), 0, 1000, (err, reply) ->
+                console.log 'REDIS ERROR: ' + err
+                console.log 'REDIS: ' + reply
 
-            if not sessions[objectData.session]
-              sessions[objectData.session] = []
+              console.log (new Date()) + ' Received Message: ' + message.utf8Data
 
-            for listener in sessions[session]
-              listener.sendUTF JSON.stringify objectData
-            console.log (new Date()) + ' Received Attachment: ' + message.utf8Data
+          when 'attachment'
+            if message.session
+              redisClient.rpush ('session_' + message.session), JSON.stringify message
+
+              if not sessions[message.session]
+                sessions[message.session] = []
+
+              for listener in sessions[session]
+                listener.sendUTF JSON.stringify message
+              console.log (new Date()) + ' Received Attachment: ' + messageString.utf8Data
 
     # else if message.type == 'binary'
     #   console.log 'Received Binary Message of ' + message.binaryData.length + ' bytes'
     #   console.log 'Binary rejected'
     #   connection.sendBytes message.binaryData
     else
-      console.warn (new Date()) + ' Message type ' + message.type
+      console.warn (new Date()) + ' Message type ' + messageString.type
 
   connection.on 'close', (reasonCode, description) ->
     if user.name
