@@ -98,6 +98,18 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 }
 ```
 ### Response
+#### Handshake
+```
+{
+	"id": null | String,
+	"type": "granted",
+	"status": Integer,
+	"session": null,
+	"data": {
+		"messages": Array
+	}
+}
+```
 #### Status, Error
 ```
 {
