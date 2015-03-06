@@ -10,7 +10,6 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 {
 	"id": String,
 	"type": String,
-	"session": null | String,
 	"data": Object
 }
 ```
@@ -41,7 +40,6 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 {
 	"id": String,
 	"type": "handshake",
-	"session": null,
 	"data": {
 		"userId": String,
 		"_userId_sign": String,
