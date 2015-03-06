@@ -43,10 +43,10 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 	"type": "handshake",
 	"session": null,
 	"data": {
-		"user": {
-			"name": String,
-			"role": String
-		}
+		"userId": String,
+		"_userId_sign": String,
+		"sessions": Array,
+		"_sessions_sign": String
 	}
 }
 ```
@@ -82,6 +82,18 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 	"type": "ping",
 	"data": {
 		"message": null | String
+	}
+}
+```
+### Received
+#### Sessions
+```
+{
+	"id": String,
+	"type": "sessions",
+	"data": {
+		"sessions": Array,
+		"_sessions_sign": String 
 	}
 }
 ```
