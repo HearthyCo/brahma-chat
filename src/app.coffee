@@ -8,6 +8,8 @@ wsUtils = require './lib/utils'
 papersPlease = require './lib/papersPlease'
 sendStatus = require './lib/sendStatus'
 
+config = require './lib/config'
+
 ###
   REDIS -------------------------------------------------------------
 ###
@@ -118,7 +120,7 @@ wsServer.on 'request', (request) ->
         id = message.id + ''
 
         # check if messageString is valid
-        if !papersPlease.message message
+        if not papersPlease.message message
           return connection.sendUTF sendStatus 4030, id
 
         message.author = user.id
@@ -133,6 +135,9 @@ wsServer.on 'request', (request) ->
             console.log new Date(), 'Ping? PONG!'
 
           when 'handshake'
+            if not papersPlease.handshake message
+              return connection.sendUTF sendStatus 4010, id
+
             user.id = message.data.userId
             user.sessions = message.data.sessions || []
 
