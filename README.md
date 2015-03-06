@@ -14,6 +14,17 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 	"data": Object
 }
 ```
+#### Received
+```
+{
+	"id": String,
+	"type": String,
+	"author": String,
+	"timestamp": Integer,
+	"session": null | String,
+	"data": Object
+}
+```
 #### Response
 ```
 {
@@ -68,7 +79,10 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 ```
 {
 	"id": String,
-	"type": "ping"
+	"type": "ping",
+	"data": {
+		"message": null | String
+	}
 }
 ```
 ### Response
@@ -88,7 +102,12 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 ```
 {
 	"id": String,
-	"type": "pong"
+	"type": "pong",
+	"author": String,
+	"timestamp": Integer,
+	"data": {
+		"message": null | String
+	}
 }
 ```
 ## Status
