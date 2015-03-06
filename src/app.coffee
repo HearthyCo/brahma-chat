@@ -136,7 +136,7 @@ wsServer.on 'request', (request) ->
             user.id = message.data.userId
             user.sessions = message.data.sessions || []
 
-            userSessions = [ 90712 ]
+            userSessions = user.sessions
             for userSession in userSessions
               if not sessions[userSession]
                 sessions[userSession] = []
