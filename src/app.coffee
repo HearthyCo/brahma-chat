@@ -80,7 +80,7 @@ wsServer = new WebSocketServer(
 wsServer.on 'request', (request) ->
   if !papersPlease.request request
     request.reject()
-    console.log (new Date()) + ' Connection from origin ' + request.origin + ' rejected.'
+    console.log new Date(), 'Connection from origin', request.origin, 'rejected'
     return
 
   connection = request.accept null, request.origin
@@ -94,7 +94,7 @@ wsServer.on 'request', (request) ->
     sessions: {}
     auth: false
 
-  console.log (new Date()) + ' Connection accepted.'
+  console.log new Date(),'Connection accepted.'
   console.log connection.on
 
   connection.on 'message', (messageString) ->
@@ -110,7 +110,8 @@ wsServer.on 'request', (request) ->
 
       for message in messages
         console.log 'MESSAGE', message
-        if not user.name and message.type isnt 'handshake' and message.type isnt 'ping'
+        console.log 'EVAL', not user.id, message.type isnt 'handshake', message.type isnt 'ping'
+        if not user.id and message.type isnt 'handshake' and message.type isnt 'ping'
           return connection.sendUTF sendStatus 4010
 
         # messageString id
@@ -129,55 +130,66 @@ wsServer.on 'request', (request) ->
         switch message.type
           when 'ping'
             connection.sendUTF JSON.stringify id: id, type: 'pong'
-            console.log (new Date()) + ' PING? PONG'
+            console.log new Date(), 'Ping? PONG!'
 
           when 'handshake'
-            user = message.data.user
+            user.id = message.data.userId
+            user.sessions = message.data.sessions || []
+
+            userSessions = [ 90712 ]
+            for userSession in userSessions
+              if not sessions[userSession]
+                sessions[userSession] = []
+              else
+                name = 'session_' + userSession
+                redisClient.llen name, (err, size) ->
+                  if not err
+                    redisClient.lrange (name), 0, size, (err, reply) ->
+                      connection.sendUTF '[' + reply + ']'
+
+              if not (connection in sessions[userSession])
+                sessions[userSession].push connection
+
             connection.sendUTF JSON.stringify sendStatus 2000, id
 
+          # when 'history'
+          #   if session?
+          #     name = 'session_' + session
+          #     size = redisClient.llen name
+          #     redisClient.lrange (name), 0, size, (err, reply) ->
+          #       msg = if err then 'REDIS ERROR: ' + err else 'REDIS: ' + reply
+          #       console.log msg
+
           when 'message'
+            console.log 'SESSION', session
+            console.log 'SESSIONS', sessions
             if session?
               redisClient.rpush ('session_' + session), JSON.stringify message
-
-              if not sessions[session]
-                sessions[session] = []
-
-              if not (connection in sessions[session])
-                sessions[session].push connection
-
-              console.log 'MESSAGE', message
 
               for listener in sessions[session]
                 if listener isnt connection
                   listener.sendUTF JSON.stringify [message]
 
-              redisClient.lrange ('session_' + session), 0, 1000, (err, reply) ->
-                msg = if err then 'REDIS ERROR: ' + err else 'REDIS: ' + reply
-                console.log msg
-
-              console.log (new Date()) + ' Received Message: ' + message
+              console.log new Date(), 'Received:', JSON.stringify message
 
           when 'attachment'
             if session
               redisClient.rpush ('session_' + session), JSON.stringify message
 
-              if not sessions[session]
-                sessions[session] = []
-
               for listener in sessions[session]
                 listener.sendUTF JSON.stringify message
-              console.log (new Date()) + ' Received Attachment: ' + messageString.utf8Data
+              console.log new Date(), 'Received Attach:', messageString.utf8Data
 
     # else if message.type == 'binary'
-    #   console.log 'Received Binary Message of ' + message.binaryData.length + ' bytes'
+    #   console.log 'Received Binary Message of', message.binaryData.length, 'bytes'
     #   console.log 'Binary rejected'
     #   connection.sendBytes message.binaryData
     else
       console.warn (new Date()) + ' Message type ' + messageString.type
 
   connection.on 'close', (reasonCode, description) ->
-    if user.name
-      console.log new Date + ' Peer ' + connection.remoteAddress + ' disconnected.'
+    if user.id
+      console.log new Date(), 'Peer', connection.remoteAddress, 'disconnected.'
       # remove connection
       clients.splice index, 1
       # remove user data
