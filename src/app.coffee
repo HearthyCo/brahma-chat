@@ -105,7 +105,6 @@ wsServer.on 'request', (request) ->
       catch e
         return connection.sendUTF sendStatus 4000
 
-
       if Object.prototype.toString.call(objectData) isnt '[object Array]'
         objectData = [objectData]
 
@@ -122,14 +121,13 @@ wsServer.on 'request', (request) ->
 
           # messageString id
           id = message.id + ''
-          delete message.id
+          # delete message.id
 
           # check if messageString is valid
           if !papersPlease.message message
             return connection.sendUTF sendStatus 4030, id
 
-          message.from = user.id
-          delete message.author
+          message.author = user.id
           # milliseconds
           message.timestamp = Date.now()
 
@@ -147,11 +145,19 @@ wsServer.on 'request', (request) ->
               if session?
                 redisClient.rpush ('session_' + session), JSON.stringify message
 
+                message.session = session
+
                 if not sessions[session]
                   sessions[session] = []
 
+                if not (connection in sessions[session])
+                  sessions[session].push connection
+
+                console.log 'MESSAGE', message
+
                 for listener in sessions[session]
-                  listener.sendUTF JSON.stringify message
+                  if listener isnt connection
+                    listener.sendUTF JSON.stringify message
 
                 redisClient.lrange ('session_' + session), 0, 1000, (err, reply) ->
                   msg = if err then 'REDIS ERROR: ' + err else 'REDIS: ' + reply
