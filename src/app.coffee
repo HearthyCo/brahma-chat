@@ -208,7 +208,7 @@ wsServer.on 'request', (request) ->
 
               for listener in sessions[session]
                 if listener isnt connection
-                  listener.sendUTF JSON.stringify [message]
+                  listener.sendUTF JSON.stringify message
 
           when 'attachment'
             if not papersPlease.message message, user.sessions
