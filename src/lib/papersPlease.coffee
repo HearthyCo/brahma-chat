@@ -1,29 +1,80 @@
+utils = require './utils'
 checkSignature = require './checkSignature'
+_ = require 'underscore'
 
 # Security checks (⌐■_■)
 papersPlease = {
   request: (request) ->
-    # TODO: check origin: request.origin
-    # TODO: check auth
+    return true if request.origin is 'http://localhost:3000'
+    return false
+
+  required: (object, userId) ->
+    # check required fields
+    requiredCommonFields = [ 'id', 'type', 'data' ]
+    requiredFields = []
+
+    return false if not utils.checkRequiredFields object, requiredCommonFields
+
+    switch object.type
+      when 'session'
+        requiredFields = [
+          'data.sessions',
+          'data._sessions_sign'
+        ]
+      when 'handshake'
+        requiredFields = [
+          'data.userId',
+          'data._userId_sign',
+          'data.sessions',
+          'data._sessions_sign' ]
+      when 'message'
+        requiredFields = [ 'session', 'data.message' ]
+      when 'attachment'
+        requiredFields = [
+          'session',
+          'data.message',
+          'data.href',
+          'data.type',
+          'data.size' ]
+      when 'ping'
+        requiredFields = [ 'data.message' ]
+
+    requiredFields = _.union requiredCommonFields, requiredFields
+    return false if not utils.checkRequiredFields object, requiredFields
+
+    # check if userid is equal to id
+    userId = object.data.userId if object.type is 'handshake' && not userId?
+    return false if userId + '' isnt object.id.split('.')[0]
+
     return true
 
-  handshake: (object) ->
-    if not object.data
-      return false
+  session: (object) ->
+    return false if not object.data
     data = object.data
-    if not data._userId_sign or not data._sessions_sign
-      return false
-
-    if not checkSignature data.userId, data._userId_sign
-      return false
 
     if not checkSignature JSON.stringify(data.sessions), data._sessions_sign
       return false
 
     return true
 
-  message: (object) ->
-    # TODO: check by type
+  handshake: (object) ->
+    return false if not object.data
+    data = object.data
+
+    return false if not checkSignature data.userId, data._userId_sign
+
+    if not checkSignature JSON.stringify(data.sessions), data._sessions_sign
+      return false
+
+    return true
+
+  message: (object, sessions) ->
+    return false if not object.data
+    data = object.data
+
+    # check if session is in user sessions allowed
+    return false if not (object.session in sessions)
+
     return true
 }
 

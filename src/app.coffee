@@ -4,9 +4,8 @@ WebSocketServer = require('websocket').server
 redis = require 'redis'
 amqp = require 'amqp'
 http = require 'http'
-wsUtils = require './lib/utils'
+utils = require './lib/utils'
 papersPlease = require './lib/papersPlease'
-sendStatus = require './lib/sendStatus'
 
 config = require './lib/config'
 
@@ -80,7 +79,7 @@ wsServer = new WebSocketServer(
   autoAcceptConnections: false)
 
 wsServer.on 'request', (request) ->
-  if !papersPlease.request request
+  if not papersPlease.request request
     request.reject()
     console.log new Date(), 'Connection from origin', request.origin, 'rejected'
     return
@@ -105,69 +104,78 @@ wsServer.on 'request', (request) ->
       try
         messages = JSON.parse messageString.utf8Data
       catch e
-        return connection.sendUTF sendStatus 4000
+        return connection.sendUTF utils.mkResponse 4000
 
       if Object.prototype.toString.call(messages) isnt '[object Array]'
         messages = [messages]
 
       for message in messages
-        console.log 'MESSAGE', message
-        console.log 'EVAL', not user.id, message.type isnt 'handshake', message.type isnt 'ping'
-        if not user.id and message.type isnt 'handshake' and message.type isnt 'ping'
-          return connection.sendUTF sendStatus 4010
+        # console.log 'MSG', message
+        if not user.id and message.type isnt 'handshake' and
+        message.type isnt 'ping'
+          return connection.sendUTF utils.mkResponse 4010
 
         # messageString id
         id = message.id + ''
 
         # check if messageString is valid
-        if not papersPlease.message message
-          return connection.sendUTF sendStatus 4030, id
+        # check required fields
+        if not papersPlease.required message, user.id
+          return connection.sendUTF utils.mkResponse 4030, id
 
         message.author = user.id
-        # milliseconds
         message.timestamp = Date.now()
 
-        # do something with it
+        # set session
         session = message.session
+
         switch message.type
           when 'ping'
-            connection.sendUTF JSON.stringify id: id, type: 'pong'
-            console.log new Date(), 'Ping? PONG!'
+            connection.sendUTF utils.mkResponse 2000, id, 'pong'
+
+          when 'session'
+            if not papersPlease.session message
+              return connection.sendUTF utils.mkResponse 4010, id
+            user.sessions = message.data.sessions
 
           when 'handshake'
             if not papersPlease.handshake message
-              return connection.sendUTF sendStatus 4010, id
+              return connection.sendUTF utils.mkResponse 4010, id
 
+            # Set user
             user.id = message.data.userId
             user.sessions = message.data.sessions || []
+
+            multi = redisClient.multi()
 
             userSessions = user.sessions
             for userSession in userSessions
               if not sessions[userSession]
                 sessions[userSession] = []
               else
-                name = 'session_' + userSession
-                redisClient.llen name, (err, size) ->
-                  if not err
-                    redisClient.lrange (name), 0, size, (err, reply) ->
-                      connection.sendUTF '[' + reply + ']'
+                multi.lrange ('session_' + userSession), 0, -1
 
               if not (connection in sessions[userSession])
                 sessions[userSession].push connection
 
-            connection.sendUTF JSON.stringify sendStatus 2000, id
+            multi.exec (err, results) ->
+              messagesHistory = []
+              if not err and results.length
+                for result in results
+                  if result.length > 0
+                    for messageResult in result
+                      try
+                        messagesHistory.push JSON.parse messageResult
+                      catch e
+                        console.log new Date(), 'Error parse:', messageResult
 
-          # when 'history'
-          #   if session?
-          #     name = 'session_' + session
-          #     size = redisClient.llen name
-          #     redisClient.lrange (name), 0, size, (err, reply) ->
-          #       msg = if err then 'REDIS ERROR: ' + err else 'REDIS: ' + reply
-          #       console.log msg
+              connection.sendUTF utils.mkResponse 2000, id, 'granted', null,
+                messages: messagesHistory
 
           when 'message'
-            console.log 'SESSION', session
-            console.log 'SESSIONS', sessions
+            if not papersPlease.message message, user.sessions
+              return connection.sendUTF utils.mkResponse 4010, id
+
             if session?
               redisClient.rpush ('session_' + session), JSON.stringify message
 
@@ -175,22 +183,24 @@ wsServer.on 'request', (request) ->
                 if listener isnt connection
                   listener.sendUTF JSON.stringify [message]
 
-              console.log new Date(), 'Received:', JSON.stringify message
-
           when 'attachment'
+            if not papersPlease.message message, user.sessions
+              return connection.sendUTF utils.mkResponse 4010, id
+
             if session
               redisClient.rpush ('session_' + session), JSON.stringify message
 
               for listener in sessions[session]
                 listener.sendUTF JSON.stringify message
-              console.log new Date(), 'Received Attach:', messageString.utf8Data
+
+        console.log new Date(), message.type, message.id
 
     # else if message.type == 'binary'
     #   console.log 'Received Binary Message of', message.binaryData.length, 'bytes'
     #   console.log 'Binary rejected'
     #   connection.sendBytes message.binaryData
     else
-      console.warn (new Date()) + ' Message type ' + messageString.type
+      console.warn new Date(), 'Message type:', messageString.type
 
   connection.on 'close', (reasonCode, description) ->
     if user.id
