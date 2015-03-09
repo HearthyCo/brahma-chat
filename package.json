@@ -14,10 +14,11 @@
   "author": "Ignacio Lago <ignacio@glue.gl>",
   "license": "ISC",
   "dependencies": {
-    "amqp": "^0.2.3",
+    "amqplib": "^0.3.1",
     "hiredis": "^0.2.0",
     "redis": "^0.12.1",
-    "websocket": "^1.0.17"
+    "websocket": "^1.0.17",
+    "when": "^3.7.2"
   },
   "devDependencies": {
     "coffeelint": "^1.9.2",
