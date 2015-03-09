@@ -64,8 +64,6 @@ amqpHandler = (msg) ->
         if listener isnt authorConnection
           listener.sendUTF JSON.stringify [message]
 
-
-
 ###
   CONFIG ------------------------------------------------------------
 ###
