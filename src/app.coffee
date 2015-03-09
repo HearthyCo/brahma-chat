@@ -2,7 +2,8 @@
 
 WebSocketServer = require('websocket').server
 redis = require 'redis'
-amqp = require 'amqp'
+amqp = require 'amqplib'
+all = (require 'when').all
 http = require 'http'
 utils = require './lib/utils'
 papersPlease = require './lib/papersPlease'
@@ -25,18 +26,45 @@ redisClient.on 'connect', ->
 ###
   AMQP --------------------------------------------------------------
 ###
-amqpClient = amqp.createConnection()
+exchange = 'amq.topic'
+keys = ['#']
 
-# Wait for connection to become established.
-amqpClient.on 'ready', ->
-  # Use the default 'amq.topic' exchange
-  connection.queue 'join', (q) ->
-    console.error 'AMQP queue: join'
-    # Catch all messages
-    q.bind '#'
+amqp.connect().then (conn) ->
+  conn.createChannel().then (ch) ->
+    ok = ch.assertExchange exchange, 'topic', durable: true
+    ok = ok.then ->
+      ch.assertQueue '', exclusive: true
+    ok = ok.then (qok) ->
+      queue = qok.queue
+      t = all keys.map (rk) -> ch.bindQueue queue, exchange, rk
+      t.then -> queue
+    ok = ok.then (queue) ->
+      ch.consume queue, amqpHandler
+    return ok.then ->
+      console.error 'AMQP listening'
+.then null, console.error
 
-    q.subscribe (message) ->
-      console.log 'AMQP message:' + message
+amqpHandler = (msg) ->
+  key = msg.fields.routingKey
+  try
+    data = JSON.parse msg.content.toString()
+  catch e
+    console.error e
+  console.log 'AMQP Received:', key, data
+
+  if key is 'chat.attachment'
+    for message in data
+      authorConnection = users[message.author]
+      session = sessions[message.session]
+      message.timestamp = Date.now()
+      # Add to Redis
+      redisClient.rpush ('session_' + session), JSON.stringify message
+      # Send it to the peers
+      for listener in session
+        if listener isnt authorConnection
+          listener.sendUTF JSON.stringify [message]
+
+
 
 ###
   CONFIG ------------------------------------------------------------
@@ -145,6 +173,7 @@ wsServer.on 'request', (request) ->
             # Set user
             user.id = message.data.userId
             user.sessions = message.data.sessions || []
+            users[user.id] = connection
 
             multi = redisClient.multi()
 
