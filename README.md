@@ -59,20 +59,6 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 	}
 }
 ```
-#### Attachment
-```
-{
-	"id": String,
-	"type": "attachment",
-	"session": String,
-	"data": {
-		"message": String,
-		"href": String,
-		"type": String (MIME),
-		"size": Integer (bytes)
-	}
-}
-```
 #### Ping
 ```
 {
@@ -95,14 +81,40 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 	}
 }
 ```
+#### Message
+```
+{
+	"id": String,
+	"type": "message",
+	"author": String,
+	"session": String,
+	"data": {
+		"message": String
+	}
+}
+```
+#### Attachment
+```
+{
+	"id": String,
+	"type": "attachment",
+	"author": String,
+	"session": String,
+	"data": {
+		"message": String,
+		"href": String,
+		"type": String (MIME),
+		"size": Integer (bytes)
+	}
+}
+```
 ### Response
 #### Handshake
 ```
 {
-	"id": null | String,
+	"id": String,
 	"type": "granted",
 	"status": Integer,
-	"session": null,
 	"data": {
 		"messages": Array
 	}
