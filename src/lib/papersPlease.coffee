@@ -5,8 +5,9 @@ _ = require 'underscore'
 # Security checks (⌐■_■)
 papersPlease = {
   request: (request) ->
-    return true if request.origin is 'http://localhost:3000'
-    return false
+    # return true if request.origin is 'http://localhost:3000'
+    # return false
+    return true
 
   required: (object, userId) ->
     # check required fields

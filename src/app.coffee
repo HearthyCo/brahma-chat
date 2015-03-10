@@ -139,6 +139,8 @@ wsServer.on 'request', (request) ->
         # console.log 'MSG', message
         if not user.id and message.type isnt 'handshake' and
         message.type isnt 'ping'
+          console.warn message.id, 'Before handshake', message.type,
+            message.data
           return connection.sendUTF utils.mkResponse 4010
 
         # messageString id
@@ -147,6 +149,7 @@ wsServer.on 'request', (request) ->
         # check if messageString is valid
         # check required fields
         if not papersPlease.required message, user.id
+          console.warn message.id, 'Missing fields', message.type, message.data
           return connection.sendUTF utils.mkResponse 4030, id
 
         message.author = user.id
@@ -155,17 +158,22 @@ wsServer.on 'request', (request) ->
         # set session
         session = message.session
 
+        console.log new Date(), message.type, message.id
         switch message.type
           when 'ping'
             connection.sendUTF utils.mkResponse 2000, id, 'pong'
 
           when 'session'
             if not papersPlease.session message
+              console.warn message.id, 'Sessions outdated', message.type,
+                message.data
               return connection.sendUTF utils.mkResponse 4010, id
             user.sessions = message.data.sessions
 
           when 'handshake'
             if not papersPlease.handshake message
+              console.warn message.id, 'Handshake failed signature',
+                message.type, message.data
               return connection.sendUTF utils.mkResponse 4010, id
 
             # Set user
@@ -187,24 +195,28 @@ wsServer.on 'request', (request) ->
 
             multi.exec (err, results) ->
               messagesHistory = []
-              if not err and results.length
-                for result in results
-                  if result.length > 0
-                    for messageResult in result
-                      try
-                        messagesHistory.push JSON.parse messageResult
-                      catch e
-                        console.log new Date(), 'Error parse:', messageResult
+              return if err
+              for result in results
+                if result.length
+                  for messageResult in result
+                    try messagesHistory.push JSON.parse messageResult
+                    catch e then console.log new Date(), 'Error parse:',
+                      messageResult
 
               connection.sendUTF utils.mkResponse 2000, id, 'granted', null,
                 messages: messagesHistory
 
           when 'message'
             if not papersPlease.message message, user.sessions
+              console.warn message.id, 'Forbidden session', message.type,
+                message.data
               return connection.sendUTF utils.mkResponse 4010, id
 
             if session?
               redisClient.rpush ('session_' + session), JSON.stringify message
+
+              if not sessions[session]
+                sessions[session] = []
 
               for listener in sessions[session]
                 if listener isnt connection
@@ -212,6 +224,8 @@ wsServer.on 'request', (request) ->
 
           when 'attachment'
             if not papersPlease.message message, user.sessions
+              console.warn message.id, 'Forbidden session', message.type,
+                message.data
               return connection.sendUTF utils.mkResponse 4010, id
 
             if session
@@ -219,8 +233,6 @@ wsServer.on 'request', (request) ->
 
               for listener in sessions[session]
                 listener.sendUTF JSON.stringify message
-
-        console.log new Date(), message.type, message.id
 
     # else if message.type == 'binary'
     #   console.log 'Received Binary Message of', message.binaryData.length, 'bytes'
