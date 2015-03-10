@@ -7,15 +7,12 @@ all = (require 'when').all
 http = require 'http'
 utils = require './lib/utils'
 papersPlease = require './lib/papersPlease'
-
 config = require './lib/config'
 
 ###
   REDIS -------------------------------------------------------------
 ###
-redisClient = redis.createClient()
-# if you'd like to select database 3, instead of 0 (default), call
-# redisClient.select(3, function() { /* ... */ });
+redisClient = redis.createClient(config.redis.port, config.redis.host, {})
 redisClient.on 'error', (err) ->
   console.error 'Redis error ' + err
   return
@@ -29,7 +26,7 @@ redisClient.on 'connect', ->
 exchange = 'amq.topic'
 keys = ['#']
 
-amqp.connect().then (conn) ->
+amqp.connect(config.amqp.url).then (conn) ->
   conn.createChannel().then (ch) ->
     ok = ch.assertExchange exchange, 'topic', durable: true
     ok = ok.then ->
@@ -65,15 +62,6 @@ amqpHandler = (msg) ->
           listener.sendUTF JSON.stringify message
 
 ###
-  CONFIG ------------------------------------------------------------
-###
-config =
-  port: 1337
-  colors:
-    client: [ 'magenta', 'purple', 'plum', 'orange' ]
-    professional: [ 'red', 'green', 'blue' ]
-
-###
   INTERNAL DB -------------------------------------------------------
 ###
 
@@ -92,8 +80,8 @@ server = http.createServer (request, response) ->
   response.writeHead 404
   response.end()
 
-server.listen config.port, ->
-  console.log (new Date()) + ' Server is listening on port ' + config.port
+server.listen config.ws.port, ->
+  console.log (new Date()) + ' Server is listening on port ' + config.ws.port
 
 wsServer = new WebSocketServer(
   httpServer: server,
