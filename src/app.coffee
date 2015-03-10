@@ -14,10 +14,10 @@ config = require './lib/config'
 ###
 redisClient = redis.createClient(config.redis.port, config.redis.host, {})
 redisClient.on 'error', (err) ->
-  console.error 'Redis error ' + err
+  console.error 'Redis error', err
   return
 redisClient.on 'connect', ->
-  console.error 'Redis connected'
+  console.info 'Redis connected'
   return
 
 ###
@@ -38,7 +38,7 @@ amqp.connect(config.amqp.url).then (conn) ->
     ok = ok.then (queue) ->
       ch.consume queue, amqpHandler
     return ok.then ->
-      console.error 'AMQP listening'
+      console.info 'AMQP listening'
 .then null, console.error
 
 amqpHandler = (msg) ->
@@ -76,12 +76,12 @@ sessions = {}
 ###
 
 server = http.createServer (request, response) ->
-  console.log (new Date()) + ' Received request for ' + request.url
+  console.log new Date(), 'Received request for', request.url
   response.writeHead 404
   response.end()
 
 server.listen config.ws.port, ->
-  console.log (new Date()) + ' Server is listening on port ' + config.ws.port
+  console.log new Date(), 'Server is listening on port', config.ws.port
 
 wsServer = new WebSocketServer(
   httpServer: server,
