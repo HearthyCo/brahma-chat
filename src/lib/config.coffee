@@ -1,4 +1,4 @@
-URL = require('url');
+URL = require 'url'
 
 redisParts = URL.parse process.env.REDIS_PORT, true
 amqpParts = URL.parse process.env.AMQP_PORT, true
