@@ -58,7 +58,7 @@ amqpHandler = (msg) ->
       session = sessions[message.session]
       message.timestamp = Date.now()
       # Add to Redis
-      redisClient.rpush ('session_' + session), JSON.stringify message
+      redisClient.rpush ('session_' + message.session), JSON.stringify message
       # Send it to the peers
       for listener in session
         if listener isnt authorConnection
