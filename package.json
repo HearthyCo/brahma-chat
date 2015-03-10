@@ -5,7 +5,7 @@
   "main": "src/app.coffee",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/app.coffee"
+    "start": "coffee src/app.coffee"
   },
   "repository": {
     "type": "git",
@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "amqplib": "^0.3.1",
+    "coffee-script": "^1.8.0",
     "coffeelint": "^1.9.2",
     "grunt": "^0.4.5",
     "grunt-coffeelint": "0.0.13",
@@ -27,5 +28,9 @@
     "when": "^3.7.2"
   },
   "devDependencies": {
+  },
+  "engines": {
+    "node": "0.10.x",
+    "npm": ">=2.1.6"
   }
 }
