@@ -14,3 +14,4 @@ module.exports = ->
 
   # DEFAULT
   @registerTask "default", ["development"]
+  @registerTask "heroku", ["production"]
