@@ -62,7 +62,7 @@ amqpHandler = (msg) ->
       # Send it to the peers
       for listener in session
         if listener isnt authorConnection
-          listener.sendUTF JSON.stringify [message]
+          listener.sendUTF JSON.stringify message
 
 ###
   CONFIG ------------------------------------------------------------
