@@ -1,21 +1,18 @@
 URL = require 'url'
 
-redisParts = URL.parse process.env.REDIS_PORT, true
-amqpParts = URL.parse process.env.AMQP_PORT, true
+redis_port = process.env.REDIS_PORT || 'tcp://localhost:6379'
+amqp_port = process.env.AMQP_PORT || 'amqp://localhost:5672'
+redisParts = URL.parse redis_port, true
+amqpParts = URL.parse amqp_port, true
 
 config =
   ws:
-    port: 1337
+    port: process.env.PORT || 1337
   redis:
-    url: process.env.REDIS_PORT
-    protocol: redisParts.protocol || 'tcp:'
-    host: redisParts.hostname || 'localhost'
-    port: redisParts.port || 6379
+    host: redisParts.hostname
+    port: redisParts.port
   amqp:
-    url: process.env.AMQP_PORT
-    protocol: amqpParts.protocol || 'amqp:'
-    host: amqpParts.hostname || 'localhost'
-    port: amqpParts.port
+    url: URL.format protocol: 'amqp:', hostname: amqpParts.hostname, port: amqpParts.port
   secret: "7WMh?srdpHHKCKE]^=CrNTS:VIvtS4<r`:^aFp^bLMdCviInZd_Vtjv?XSITK?Jr"
   colors:
     client: [ 'magenta', 'purple', 'plum', 'orange' ]
