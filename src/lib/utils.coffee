@@ -19,7 +19,7 @@ utils =
       for field in fields
         return false if not t[field]?
         t = t[field]
-    return true;
+    return true
 
   mkResponse: (code, id, type, session, data) ->
     status = statusCodes[code]
