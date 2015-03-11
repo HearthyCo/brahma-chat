@@ -1,4 +1,7 @@
 # Brahma Chat
+
+BUILDPACK_URL=https://github.com/mbuchetics/heroku-buildpack-nodejs-grunt.git
+
 ## Websockets
 Refer to [socket.io](http://socket.io/) for technical stuff.
 
