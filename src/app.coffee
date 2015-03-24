@@ -47,10 +47,11 @@ amqpHandler = (msg) ->
     data = JSON.parse msg.content.toString()
   catch e
     console.error e
-  console.log 'AMQP Received:', key, data
+  #console.log 'AMQP Received:', key, data
 
   if key is 'chat.attachment'
     for message in data
+      console.log new Date(), message.type, message.id
       authorConnection = users[message.author]
       session = sessions[message.session]
       message.timestamp = Date.now()
