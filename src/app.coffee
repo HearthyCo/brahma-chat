@@ -24,7 +24,7 @@ redisClient.on 'connect', ->
   AMQP --------------------------------------------------------------
 ###
 exchange = 'amq.topic'
-keys = ['#']
+keys = ['chat.attachment']
 
 amqp.connect(config.amqp.url).then (conn) ->
   conn.createChannel().then (ch) ->
