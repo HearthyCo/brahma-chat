@@ -24,7 +24,7 @@ redisClient.on 'connect', ->
   AMQP --------------------------------------------------------------
 ###
 exchange = 'amq.topic'
-keys = ['chat.attachment']
+keys = ['chat.attachment', 'session.close']
 
 amqp.connect(config.amqp.url).then (conn) ->
   conn.createChannel().then (ch) ->
@@ -52,15 +52,29 @@ amqpHandler = (msg) ->
   if key is 'chat.attachment'
     for message in data
       console.log new Date(), message.type, message.id
-      authorConnection = users[message.author]
+      authorConnections = users[message.author] || []
       session = sessions[message.session]
       message.timestamp = Date.now()
       # Add to Redis
       redisClient.rpush ('session_' + message.session), JSON.stringify message
       # Send it to the peers
       for listener in session
-        if listener isnt authorConnection
+        if listener not in authorConnections
           listener.sendUTF JSON.stringify message
+
+  if key is 'session.close'
+    console.log new Date(), 'session.close', data.id
+    ts = Date.now()
+    for listener in sessions[data.id] || []
+      # Bump signature validity so users can't re-join
+      papersPlease.checkSignatureValidity listener.user.id, 'sessions', ts
+      # Send kick notification
+      listener.sendUTF JSON.stringify
+        id: null
+        type: 'kick'
+        status: 1000
+        data: session: data.id
+    sessions[data.id] = []
 
 ###
   INTERNAL DB -------------------------------------------------------
@@ -68,7 +82,7 @@ amqpHandler = (msg) ->
 
 # list of currently connected clients (users)
 clients = []
-users = {}
+userSockets = {}
 # list of currently connected sessions
 sessions = {}
 
@@ -111,7 +125,6 @@ wsServer.on 'request', (request) ->
     auth: false
 
   console.log new Date(),'Connection accepted.'
-  console.log connection.on
 
   connection.on 'message', (messageString) ->
     if messageString.type == 'utf8'
@@ -153,11 +166,34 @@ wsServer.on 'request', (request) ->
             connection.sendUTF utils.mkResponse 2000, id, 'pong'
 
           when 'session'
-            if not papersPlease.session message
+            if not papersPlease.session message, user.id
               console.warn message.id, 'Sessions outdated', message.type,
                 message.data
               return connection.sendUTF utils.mkResponse 4010, id
             user.sessions = message.data.sessions
+
+            multi = redisClient.multi()
+            for userSession in user.sessions
+              if not sessions[userSession]
+                sessions[userSession] = []
+              else
+                multi.lrange ('session_' + userSession), 0, -1
+
+              if not (connection in sessions[userSession])
+                sessions[userSession].push connection
+
+            multi.exec (err, results) ->
+              messagesHistory = []
+              return if err
+              for result in results
+                if result.length
+                  for messageResult in result
+                    try messagesHistory.push JSON.parse messageResult
+                    catch e then console.log new Date(), 'Error parse:',
+                      messageResult
+
+              connection.sendUTF utils.mkResponse 2000, id, 'joined', null,
+                messages: messagesHistory
 
           when 'handshake'
             if not papersPlease.handshake message
@@ -168,7 +204,12 @@ wsServer.on 'request', (request) ->
             # Set user
             user.id = message.data.userId
             user.sessions = message.data.sessions || []
-            users[user.id] = connection
+            connection.user = user
+
+            # Add socket to user socket list
+            alters = userSockets[user.id] || []
+            alters.push(connection)
+            userSockets[user.id] = alters
 
             multi = redisClient.multi()
 
@@ -235,5 +276,7 @@ wsServer.on 'request', (request) ->
       console.log new Date(), 'Peer', connection.remoteAddress, 'disconnected.'
       # remove connection
       clients.splice index, 1
-      # remove user data
-      delete users[user.id]
+      # remove user socket from list
+      alters = userSockets[user.id]
+      pos = alters.indexOf connection
+      alters.splice pos, 1

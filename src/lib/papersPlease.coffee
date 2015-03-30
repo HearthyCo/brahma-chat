@@ -3,7 +3,10 @@ checkSignature = require './checkSignature'
 _ = require 'underscore'
 
 # Security checks (⌐■_■)
-papersPlease = {
+
+userMinTimestamps = {}
+
+papersPlease =
   request: (request) ->
     # return true if request.origin is 'http://localhost:3000'
     # return false
@@ -49,12 +52,15 @@ papersPlease = {
 
     return true
 
-  session: (object) ->
-    return false if not object.data
+  session: (object, uid) ->
+    return false if not object.data or not uid
     data = object.data
 
     if not checkSignature JSON.stringify(data.sessions), data._sessions_sign
       return false
+
+    sessionsTs = data._sessions_sign.substring 44
+    return false if not @checkSignatureValidity uid, 'sessions', sessionsTs
 
     return true
 
@@ -67,6 +73,12 @@ papersPlease = {
     if not checkSignature JSON.stringify(data.sessions), data._sessions_sign
       return false
 
+    uid = data.userId
+    userIdTs = data._userId_sign.substring 44
+    sessionsTs = data._sessions_sign.substring 44
+    return false if not @checkSignatureValidity uid, 'userId', userIdTs
+    return false if not @checkSignatureValidity uid, 'sessions', sessionsTs
+
     return true
 
   message: (object, sessions) ->
@@ -77,6 +89,12 @@ papersPlease = {
     return false if not (object.session in sessions)
 
     return true
-}
+
+  checkSignatureValidity: (userId, kind, newTimestamp) ->
+    userMinTimestamps[userId] = {} if not userMinTimestamps[userId]
+    return false if userMinTimestamps[userId][kind]? > newTimestamp
+    userMinTimestamps[userId][kind] = newTimestamp
+    true
+
 
 module.exports = exports = papersPlease
