@@ -52,7 +52,7 @@ amqpHandler = (msg) ->
   if key is 'chat.attachment'
     for message in data
       console.log new Date(), message.type, message.id
-      authorConnections = users[message.author] || []
+      authorConnections = users[message.author] or []
       session = sessions[message.session]
       message.timestamp = Date.now()
       # Add to Redis
@@ -65,7 +65,7 @@ amqpHandler = (msg) ->
   if key is 'session.close'
     console.log new Date(), 'session.close', data.id
     ts = Date.now()
-    for listener in sessions[data.id] || []
+    for listener in sessions[data.id] or []
       # Bump signature validity so users can't re-join
       papersPlease.checkSignatureValidity listener.user.id, 'sessions', ts
       # Send kick notification
@@ -203,11 +203,11 @@ wsServer.on 'request', (request) ->
 
             # Set user
             user.id = message.data.userId
-            user.sessions = message.data.sessions || []
+            user.sessions = message.data.sessions or []
             connection.user = user
 
             # Add socket to user socket list
-            alters = userSockets[user.id] || []
+            alters = userSockets[user.id] or []
             alters.push(connection)
             userSockets[user.id] = alters
 

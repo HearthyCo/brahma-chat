@@ -47,7 +47,7 @@ papersPlease =
     return false if not utils.checkRequiredFields object, requiredFields
 
     # check if userid is equal to id
-    userId = object.data.userId if object.type is 'handshake' && not userId?
+    userId = object.data.userId if object.type is 'handshake' and not userId?
     return false if userId + '' isnt object.id.split('.')[0]
 
     return true

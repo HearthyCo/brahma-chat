@@ -23,10 +23,10 @@ utils =
 
   mkResponse: (code, id, type, session, data) ->
     status = statusCodes[code]
-    type = type || 'status'
-    data = data || message: status
+    type = type or 'status'
+    data = data or message: status
 
-    console.warn new Date(), code, type, data if code >= 4000 && status?
+    console.warn new Date(), code, type, data if code >= 4000 and status?
 
     if not status
       code = 5000

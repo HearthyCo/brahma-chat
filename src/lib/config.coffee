@@ -1,11 +1,11 @@
 URL = require 'url'
 
 # REDIS
-redis_env = process.env.REDIS_PORT || 'tcp://localhost:6379'
+redis_env = process.env.REDIS_PORT or 'tcp://localhost:6379'
 redis = URL.parse redis_env, true
 
 # AMQP
-amqp_env = process.env.AMQP_PORT || 'amqp://localhost:5672'
+amqp_env = process.env.AMQP_PORT or 'amqp://localhost:5672'
 amqp = URL.parse amqp_env, true
 
 # Protocol defaults to amqp:
@@ -13,7 +13,7 @@ amqp.protocol = 'amqp:'
 
 config =
   ws:
-    port: process.env.PORT || 1337
+    port: process.env.PORT or 1337
   redis:
     host: redis.hostname
     port: redis.port
