@@ -41,6 +41,20 @@ amqp.connect(config.amqp.url).then (conn) ->
       console.info 'AMQP listening'
 .then null, console.error
 
+###
+  INTERNAL DB -------------------------------------------------------
+###
+
+# list of currently connected clients (users)
+clients = []
+userSockets = {}
+# list of currently connected sessions
+sessions = {}
+
+###
+  AMQP HANDLER ------------------------------------------------------
+###
+
 amqpHandler = (msg) ->
   key = msg.fields.routingKey
   try
@@ -52,7 +66,7 @@ amqpHandler = (msg) ->
   if key is 'chat.attachment'
     for message in data
       console.log new Date(), message.type, message.id
-      authorConnections = users[message.author] or []
+      authorConnections = userSockets[message.author] or []
       session = sessions[message.session]
       message.timestamp = Date.now()
       # Add to Redis
@@ -75,16 +89,6 @@ amqpHandler = (msg) ->
         status: 1000
         data: session: data.id
     sessions[data.id] = []
-
-###
-  INTERNAL DB -------------------------------------------------------
-###
-
-# list of currently connected clients (users)
-clients = []
-userSockets = {}
-# list of currently connected sessions
-sessions = {}
 
 ###
   WEBSOCKETS --------------------------------------------------------
