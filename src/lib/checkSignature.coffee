@@ -46,6 +46,9 @@ module.exports = exports = (string, sign) ->
   signature = sign.substring 0, 44
 
   # timestamp + string = stringToSign
-  newSignature = crypto.createHmac("SHA256", secret).update(timestamp + string).digest('base64')
+  newSignature = crypto
+    .createHmac("SHA256", secret)
+    .update(timestamp + string)
+    .digest('base64')
 
   return signature is newSignature

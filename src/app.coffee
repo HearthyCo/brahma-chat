@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 WebSocketServer = require('websocket').server
-redis = require 'redis'
 amqp = require 'amqplib'
 all = (require 'when').all
 http = require 'http'
@@ -9,47 +8,44 @@ utils = require './lib/utils'
 papersPlease = require './lib/papersPlease'
 config = require './lib/config'
 
-###
-  REDIS -------------------------------------------------------------
-###
-redisClient = redis.createClient(config.redis.port, config.redis.host, {})
-redisClient.on 'error', (err) ->
-  console.error 'Redis error', err
-  return
-redisClient.on 'connect', ->
-  console.info 'Redis connected'
-  return
+# list of currently connected clients
+db = require './lib/localData'
+
+messageManager = require './lib/messageManager'
+chat = require './lib/chatActions'
 
 ###
   AMQP --------------------------------------------------------------
 ###
+
 exchange = 'amq.topic'
 keys = ['chat.attachment', 'session.close']
 
-amqp.connect(config.amqp.url).then (conn) ->
-  conn.createChannel().then (ch) ->
-    ok = ch.assertExchange exchange, 'topic', durable: true
-    ok = ok.then ->
-      ch.assertQueue '', exclusive: true
-    ok = ok.then (qok) ->
-      queue = qok.queue
-      t = all keys.map (rk) -> ch.bindQueue queue, exchange, rk
-      t.then -> queue
-    ok = ok.then (queue) ->
-      ch.consume queue, amqpHandler
-    return ok.then ->
-      console.info 'AMQP listening'
-.then null, console.error
+connectAMQP = (n = 0) ->
+  amqp.connect(config.amqp.url).then (conn) ->
+    conn.createChannel().then (ch) ->
+      ok = ch.assertExchange exchange, 'topic', durable: true
+      ok = ok.then ->
+        ch.assertQueue '', exclusive: true
+      ok = ok.then (qok) ->
+        queue = qok.queue
+        t = all keys.map (rk) -> ch.bindQueue queue, exchange, rk
+        t.then -> queue
+      ok = ok.then (queue) ->
+        ch.consume queue, amqpHandler
+      return ok.then ->
+        console.info 'AMQP listening'
+  .then null, (err) ->
+    console.error err
+    # 10 retries
+    if n < 9
+      console.info 'Retrying'
+      process.nextTick ->
+        connectAMQP n++
+    else
+      console.error 'No more retries'
 
-###
-  INTERNAL DB -------------------------------------------------------
-###
-
-# list of currently connected clients (users)
-clients = []
-userSockets = {}
-# list of currently connected sessions
-sessions = {}
+connectAMQP 0
 
 ###
   AMQP HANDLER ------------------------------------------------------
@@ -61,34 +57,16 @@ amqpHandler = (msg) ->
     data = JSON.parse msg.content.toString()
   catch e
     console.error e
-  #console.log 'AMQP Received:', key, data
 
+  # Attachment received
   if key is 'chat.attachment'
     for message in data
-      console.log new Date(), message.type, message.id
-      authorConnections = userSockets[message.author] or []
-      session = sessions[message.session]
-      message.timestamp = Date.now()
-      # Add to Redis
-      redisClient.rpush ('session_' + message.session), JSON.stringify message
-      # Send it to the peers
-      for listener in session
-        if listener not in authorConnections
-          listener.sendUTF JSON.stringify message
+      chat.broadcast message
 
+  # Close received
   if key is 'session.close'
     console.log new Date(), 'session.close', data.id
-    ts = Date.now()
-    for listener in sessions[data.id] or []
-      # Bump signature validity so users can't re-join
-      papersPlease.checkSignatureValidity listener.user.id, 'sessions', ts
-      # Send kick notification
-      listener.sendUTF JSON.stringify
-        id: null
-        type: 'kick'
-        status: 1000
-        data: session: data.id
-    sessions[data.id] = []
+    chat.destroy data.id
 
 ###
   WEBSOCKETS --------------------------------------------------------
@@ -109,16 +87,16 @@ wsServer = new WebSocketServer(
   # facilities built into the protocol and the browser.  You should
   # *always* verify the connection's origin and decide whether or not
   # to accept it.
-  autoAcceptConnections: false)
+  autoAcceptConnections: false
+)
 
 wsServer.on 'request', (request) ->
   if not papersPlease.request request
-    request.reject()
-    console.log new Date(), 'Connection from origin', request.origin, 'rejected'
-    return
+    console.warn new Date(), 'Connection from origin', request.origin, 'rejected'
+    return request.reject()
 
   connection = request.accept null, request.origin
-  index = clients.push(connection) - 1
+  index = db.addClient connection
 
   # User data initialization
   user =
@@ -127,6 +105,7 @@ wsServer.on 'request', (request) ->
     name: null
     sessions: {}
     auth: false
+    connection: connection
 
   console.log new Date(),'Connection accepted.'
 
@@ -142,136 +121,29 @@ wsServer.on 'request', (request) ->
         messages = [messages]
 
       for message in messages
-        # console.log 'MSG', message
+
+        # Test if handshake is done
         if not user.id and message.type isnt 'handshake' and
         message.type isnt 'ping'
           console.warn message.id, 'Before handshake', message.type,
             message.data
           return connection.sendUTF utils.mkResponse 4010
 
-        # messageString id
-        id = message.id + ''
-
         # check if messageString is valid
         # check required fields
         if not papersPlease.required message, user.id
           console.warn message.id, 'Missing fields', message.type, message.data
-          return connection.sendUTF utils.mkResponse 4030, id
+          return connection.sendUTF utils.mkResponse 4030, (message.id + '')
 
+        # set author
         message.author = user.id
-        message.timestamp = Date.now()
-
         # set session
         session = message.session
 
+        # Send to messageManager
         console.log new Date(), message.type, message.id
-        switch message.type
-          when 'ping'
-            connection.sendUTF utils.mkResponse 2000, id, 'pong'
+        messageManager message, user
 
-          when 'session'
-            if not papersPlease.session message, user.id
-              console.warn message.id, 'Sessions outdated', message.type,
-                message.data
-              return connection.sendUTF utils.mkResponse 4010, id
-            user.sessions = message.data.sessions
-
-            multi = redisClient.multi()
-            for userSession in user.sessions
-              if not sessions[userSession]
-                sessions[userSession] = []
-              else
-                multi.lrange ('session_' + userSession), 0, -1
-
-              if not (connection in sessions[userSession])
-                sessions[userSession].push connection
-
-            multi.exec (err, results) ->
-              messagesHistory = []
-              return if err
-              for result in results
-                if result.length
-                  for messageResult in result
-                    try messagesHistory.push JSON.parse messageResult
-                    catch e then console.log new Date(), 'Error parse:',
-                      messageResult
-
-              connection.sendUTF utils.mkResponse 2000, id, 'joined', null,
-                messages: messagesHistory
-
-          when 'handshake'
-            if not papersPlease.handshake message
-              console.warn message.id, 'Handshake failed signature',
-                message.type, message.data
-              return connection.sendUTF utils.mkResponse 4010, id
-
-            # Set user
-            user.id = message.data.userId
-            user.sessions = message.data.sessions or []
-            connection.user = user
-
-            # Add socket to user socket list
-            alters = userSockets[user.id] or []
-            alters.push(connection)
-            userSockets[user.id] = alters
-
-            multi = redisClient.multi()
-
-            userSessions = user.sessions
-            for userSession in userSessions
-              if not sessions[userSession]
-                sessions[userSession] = []
-              else
-                multi.lrange ('session_' + userSession), 0, -1
-
-              if not (connection in sessions[userSession])
-                sessions[userSession].push connection
-
-            multi.exec (err, results) ->
-              messagesHistory = []
-              return if err
-              for result in results
-                if result.length
-                  for messageResult in result
-                    try messagesHistory.push JSON.parse messageResult
-                    catch e then console.log new Date(), 'Error parse:',
-                      messageResult
-
-              connection.sendUTF utils.mkResponse 2000, id, 'granted', null,
-                messages: messagesHistory
-
-          when 'message'
-            if not papersPlease.message message, user.sessions
-              console.warn message.id, 'Forbidden session', message.type,
-                message.data
-              return connection.sendUTF utils.mkResponse 4010, id
-
-            if session?
-              redisClient.rpush ('session_' + session), JSON.stringify message
-
-              if not sessions[session]
-                sessions[session] = []
-
-              for listener in sessions[session]
-                if listener isnt connection
-                  listener.sendUTF JSON.stringify message
-
-          when 'attachment'
-            if not papersPlease.message message, user.sessions
-              console.warn message.id, 'Forbidden session', message.type,
-                message.data
-              return connection.sendUTF utils.mkResponse 4010, id
-
-            if session
-              redisClient.rpush ('session_' + session), JSON.stringify message
-
-              for listener in sessions[session]
-                listener.sendUTF JSON.stringify message
-
-    # else if message.type == 'binary'
-    #   console.log 'Received Binary Message of', message.binaryData.length, 'bytes'
-    #   console.log 'Binary rejected'
-    #   connection.sendBytes message.binaryData
     else
       console.warn new Date(), 'Message type:', messageString.type
 
@@ -279,8 +151,6 @@ wsServer.on 'request', (request) ->
     if user.id
       console.log new Date(), 'Peer', connection.remoteAddress, 'disconnected.'
       # remove connection
-      clients.splice index, 1
+      db.removeClient index
       # remove user socket from list
-      alters = userSockets[user.id]
-      pos = alters.indexOf connection
-      alters.splice pos, 1
+      db.removeUserSocket user.id, connection
