@@ -1,28 +1,54 @@
 #!/usr/bin/env node
 
+require('better-console-log')()
+
 WebSocketServer = require('websocket').server
 amqp = require 'amqplib'
 all = (require 'when').all
 http = require 'http'
 utils = require './lib/utils'
-papersPlease = require './lib/papersPlease'
-config = require './lib/config'
 
-# list of currently connected clients
-db = require './lib/localData'
+PapersPlease = require './lib/PapersPlease'
+Config = require './lib/Config'
+Database = require './lib/Database'
+MessageManager = require './lib/MessageManager'
+Chat = require './lib/ChatActions'
 
-messageManager = require './lib/messageManager'
-chat = require './lib/chatActions'
+Chat.connect Config
+
+# Avoid coffeelint-undefined-variable bug #4
+ex = ex or null
+
+###
+  AMQP HANDLER ------------------------------------------------------
+###
+
+amqpHandler = (msg) ->
+  key = msg.fields.routingKey
+  try
+    data = JSON.parse msg.content.toString()
+  catch ex
+    console.error "JSON.parse:", ex
+
+  # Attachment received
+  if key is 'Chat.attachment'
+    for message in data
+      Chat.broadcast message
+
+  # Close received
+  if key is 'session.close'
+    console.log 'session.close', data.id
+    Chat.destroy data.id
 
 ###
   AMQP --------------------------------------------------------------
 ###
 
 exchange = 'amq.topic'
-keys = ['chat.attachment', 'session.close']
+keys = ['Chat.attachment', 'session.close']
 
 connectAMQP = (n = 0) ->
-  amqp.connect(config.amqp.url).then (conn) ->
+  amqp.connect(Config.amqp.url).then (conn) ->
     conn.createChannel().then (ch) ->
       ok = ch.assertExchange exchange, 'topic', durable: true
       ok = ok.then ->
@@ -36,49 +62,28 @@ connectAMQP = (n = 0) ->
       return ok.then ->
         console.info 'AMQP listening'
   .then null, (err) ->
-    console.error err
     # 10 retries
     if n < 9
-      console.info 'Retrying'
+      console.warn "AMQP. Retry #{n+1} after:", err
+      n = n + 1
       process.nextTick ->
-        connectAMQP n++
+        connectAMQP n
     else
-      console.error 'No more retries'
+      console.error 'AMQP. No more retries after:', err
 
 connectAMQP 0
-
-###
-  AMQP HANDLER ------------------------------------------------------
-###
-
-amqpHandler = (msg) ->
-  key = msg.fields.routingKey
-  try
-    data = JSON.parse msg.content.toString()
-  catch e
-    console.error e
-
-  # Attachment received
-  if key is 'chat.attachment'
-    for message in data
-      chat.broadcast message
-
-  # Close received
-  if key is 'session.close'
-    console.log new Date(), 'session.close', data.id
-    chat.destroy data.id
 
 ###
   WEBSOCKETS --------------------------------------------------------
 ###
 
 server = http.createServer (request, response) ->
-  console.log new Date(), 'Received request for', request.url
+  console.log 'Received request for', request.url
   response.writeHead 404
   response.end()
 
-server.listen config.ws.port, ->
-  console.log new Date(), 'Server is listening on port', config.ws.port
+server.listen Config.ws.port, ->
+  console.log 'Server is listening on port', Config.ws.port
 
 wsServer = new WebSocketServer(
   httpServer: server,
@@ -91,12 +96,13 @@ wsServer = new WebSocketServer(
 )
 
 wsServer.on 'request', (request) ->
-  if not papersPlease.request request
-    console.warn new Date(), 'Connection from origin', request.origin, 'rejected'
+  if not PapersPlease.request request
+    console.warn 'Connection from origin',
+      request.origin, 'rejected'
     return request.reject()
 
   connection = request.accept null, request.origin
-  index = db.addClient connection
+  index = Database.client.add connection
 
   # User data initialization
   user =
@@ -107,14 +113,15 @@ wsServer.on 'request', (request) ->
     auth: false
     connection: connection
 
-  console.log new Date(),'Connection accepted.'
+  console.log 'Connection accepted.'
 
   connection.on 'message', (messageString) ->
     if messageString.type == 'utf8'
       # JSON messageString
       try
         messages = JSON.parse messageString.utf8Data
-      catch e
+      catch ex
+        console.warn "JSON.parse:", ex
         return connection.sendUTF utils.mkResponse 4000
 
       if Object.prototype.toString.call(messages) isnt '[object Array]'
@@ -131,26 +138,25 @@ wsServer.on 'request', (request) ->
 
         # check if messageString is valid
         # check required fields
-        if not papersPlease.required message, user.id
+        if not PapersPlease.required message, user.id
           console.warn message.id, 'Missing fields', message.type, message.data
           return connection.sendUTF utils.mkResponse 4030, (message.id + '')
 
         # set author
         message.author = user.id
-        # set session
-        session = message.session
 
-        # Send to messageManager
-        console.log new Date(), message.type, message.id
-        messageManager message, user
+        # Send to MessageManager
+        console.log message.type, message.id
+        MessageManager message, user
 
     else
-      console.warn new Date(), 'Message type:', messageString.type
+      console.warn 'Message type:', messageString.type
 
   connection.on 'close', (reasonCode, description) ->
     if user.id
-      console.log new Date(), 'Peer', connection.remoteAddress, 'disconnected.'
+      console.log 'Peer', connection.remoteAddress,
+        'disconnected.', reasonCode, description
       # remove connection
-      db.removeClient index
+      Database.client.remove index
       # remove user socket from list
-      db.removeUserSocket user.id, connection
+      Database.userSockets.remove user.id, connection

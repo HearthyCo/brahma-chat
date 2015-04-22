@@ -1,5 +1,5 @@
 crypto = require 'crypto'
-secret = require('./config').secret
+secret = require('./Config').secret
 
 ###
   public class Signing {
@@ -10,13 +10,17 @@ secret = require('./config').secret
       }
 
       public static String sign(String message, long date) {
-          String key = Play.application().configuration().getString("application.secret");
+          String key = Play.application()
+            .configuration().getString("application.secret");
           String innerMessage = Long.toString(date) + message;
           try {
               Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-              SecretKeySpec secret_key = new SecretKeySpec(key.getBytes(), "HmacSHA256");
+              SecretKeySpec secret_key =
+                new SecretKeySpec(key.getBytes(), "HmacSHA256");
               sha256_HMAC.init(secret_key);
-              String hash = Base64.encodeBase64String(sha256_HMAC.doFinal(innerMessage.getBytes()));
+              String hash = Base64.encodeBase64String(
+                sha256_HMAC.doFinal(innerMessage.getBytes())
+              );
               return hash + Long.toString(date);
           } catch (NoSuchAlgorithmException e) {
               throw new RuntimeException(e);

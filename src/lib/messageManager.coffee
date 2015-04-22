@@ -1,11 +1,13 @@
-db = require './localData'
-chat = require './chatActions'
+Database = require './Database'
+Chat = require './ChatActions'
+PapersPlease = require './PapersPlease'
+utils = require './utils'
 
 module.exports = manager = (message, user) ->
 
   id = message.id + ''
 
-  console.log new Date(), message.type, message.id
+  console.log message.type, message.id, message
   switch message.type
     # PING? PONG!
     when 'ping'
@@ -13,13 +15,13 @@ module.exports = manager = (message, user) ->
 
     # JOIN
     when 'session'
-      if not papersPlease.session message, user.id
+      if not PapersPlease.session message, user.id
         console.warn message.id, 'Sessions outdated', message.type,
           message.data
         return user.connection.sendUTF utils.mkResponse 4010, id
 
       user.sessions = message.data.sessions
-      chat.loadSessions user, (err, history) ->
+      Chat.loadSessions user, (err, history) ->
         if not err
           user.connection.sendUTF utils.mkResponse 2000, id, 'joined', null,
             messages: history
@@ -28,7 +30,7 @@ module.exports = manager = (message, user) ->
 
     # CONNECT
     when 'handshake'
-      if not papersPlease.handshake message
+      if not PapersPlease.handshake message
         console.warn message.id, 'Handshake failed signature',
           message.type, message.data
         return user.connection.sendUTF utils.mkResponse 4010, id
@@ -38,9 +40,9 @@ module.exports = manager = (message, user) ->
       user.sessions = message.data.sessions or []
 
       # Add socket to user socket list
-      db.addUserSocket user.id, user.connection
+      Database.userSockets.add user.id, user.connection
 
-      chat.loadSessions user, (err, history) ->
+      Chat.loadSessions user, (err, history) ->
         if not err
           user.connection.sendUTF utils.mkResponse 2000, id, 'granted', null,
             messages: history
@@ -49,18 +51,18 @@ module.exports = manager = (message, user) ->
 
     # MESSAGE
     when 'message'
-      if not papersPlease.message message, user.sessions
+      if not PapersPlease.message message, user.sessions
         console.warn message.id, 'Forbidden session', message.type,
           message.data
         return user.connection.sendUTF utils.mkResponse 4010, id
 
-      chat.broadcast message
+      Chat.broadcast message
 
     # ATTACHMENT
     when 'attachment'
-      if not papersPlease.message message, user.sessions
+      if not PapersPlease.message message, user.sessions
         console.warn message.id, 'Forbidden session', message.type,
           message.data
         return user.connection.sendUTF utils.mkResponse 4010, id
 
-      chat.broadcast message
+      Chat.broadcast message
