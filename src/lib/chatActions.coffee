@@ -2,6 +2,12 @@ Config = require './Config'
 redis = require 'redis'
 Database = require './Database'
 PapersPlease = require './PapersPlease'
+utils = require './utils'
+
+# Events
+_on = {}
+_trigger = (ev, err, payload) ->
+  _on[ev](err, payload) if _on[ev]
 
 ###
   REDIS -------------------------------------------------------------
@@ -67,7 +73,7 @@ module.exports = actions =
         data: session: data.id
     # Destroy session
     Database.sessionSockets.destroy sessionId
-    _trigger 'destroy', err, {}
+    _trigger 'destroy', null, {}
 
   # Load user's sessions messages
   loadSessions: (user) ->
@@ -89,10 +95,10 @@ module.exports = actions =
             for messageResult in result
               try
                 messagesHistory.push JSON.parse messageResult
-              catch e
+              catch ex
                 console.log 'Error parse:', messageResult
 
-        data.user.connection.sendUTF utils.mkResponse 2000, id, 'joined', null,
+        user.connection.sendUTF utils.mkResponse 2000, id, 'joined', null,
           messages: messagesHistory
       else
         console.error "Error loading user sessions", err
@@ -100,12 +106,7 @@ module.exports = actions =
       _trigger 'loadSessions', err,
         user: user, history: messagesHistory
 
-
 # Events
-_on = {}
-_trigger = (ev, err, payload) ->
-  _on[ev](err, payload) if _on[ev]
-
 actions.on = (ev, callback) ->
   if 'object' is typeof ev
     ev.forEach (e) ->

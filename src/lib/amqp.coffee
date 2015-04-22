@@ -1,6 +1,11 @@
 amqplib = require 'amqplib'
 all = (require 'when').all
 
+# Events
+_on = {}
+_trigger = (ev, err, payload) ->
+  _on[ev](err, payload) if _on[ev]
+
 module.exports = amqp =
   config: {}
   exchange: 'amq.topic'
@@ -80,10 +85,6 @@ module.exports = amqp =
       amqp.onProcessed
 
 # Events
-_on = {}
-_trigger = (ev, err, payload) ->
-  _on[ev](err, payload) if _on[ev]
-
 amqp.on = (ev, callback) ->
   if 'object' is typeof ev
     ev.forEach (e) ->

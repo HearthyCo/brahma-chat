@@ -25,7 +25,7 @@ MessageManager.on ['attachment', 'message'], (err, data) ->
   Chat.broadcast data.message if not err
 
 MessageManager.on ['handshake', 'session'], (err, data) ->
-  Chat.loadSessions user
+  Chat.loadSessions data.user if not err
 
 ###
   AMQP --------------------------------------------------------------

@@ -3,6 +3,11 @@ Chat = require './ChatActions'
 PapersPlease = require './PapersPlease'
 utils = require './utils'
 
+# Events
+_on = {}
+_trigger = (ev, err, payload) ->
+  _on[ev](err, payload) if _on[ev]
+
 module.exports = manager = (message, user) ->
 
   id = message.id + ''
@@ -25,7 +30,7 @@ module.exports = manager = (message, user) ->
         return user.connection.sendUTF utils.mkResponse 4010, id
 
       user.sessions = message.data.sessions
-      _trigger 'session', err,
+      _trigger 'session', null,
         user: user, message: message
 
 
@@ -70,10 +75,6 @@ module.exports = manager = (message, user) ->
         user: user, message: message
 
 # Events
-_on = {}
-_trigger = (ev, err, payload) ->
-  _on[ev](err, payload) if _on[ev]
-
 manager.on = (ev, callback) ->
   if 'object' is typeof ev
     ev.forEach (e) ->
