@@ -24,7 +24,6 @@
     "when": "^3.7.2"
   },
   "devDependencies": {
-    "coffeelint": "^1.9.2",
     "coffeelint-undefined-variables": "0.0.2",
     "coffeelint-variable-scope": "0.0.3",
     "grunt": "^0.4.5",
