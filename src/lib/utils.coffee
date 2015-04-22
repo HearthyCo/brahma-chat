@@ -26,12 +26,12 @@ utils =
     type = type or 'status'
     data = data or message: status
 
-    console.warn new Date(), code, type, data if code >= 4000 and status?
+    console.warn code, type, data if code >= 4000 and status?
 
     if not status
       code = 5000
       status = 'Internal Server Error'
-      console.error new Date(), status, type, data
+      console.error status, type, data
 
     statusObject =
       id: id or null
