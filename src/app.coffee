@@ -3,72 +3,46 @@
 require('better-console-log')()
 
 WebSocketServer = require('websocket').server
-amqp = require 'amqplib'
-all = (require 'when').all
 http = require 'http'
 utils = require './lib/utils'
 
 PapersPlease = require './lib/PapersPlease'
 Config = require './lib/Config'
 Database = require './lib/Database'
-MessageManager = require './lib/MessageManager'
-Chat = require './lib/ChatActions'
 
+###
+  CHAT --------------------------------------------------------------
+###
+Chat = require './lib/ChatActions'
 Chat.connect Config
 
 ###
-  AMQP HANDLER ------------------------------------------------------
+  MESSAGE MANAGER ---------------------------------------------------
 ###
 
-amqpHandler = (msg) ->
-  key = msg.fields.routingKey
-  try
-    data = JSON.parse msg.content.toString()
-  catch ex
-    console.error "JSON.parse:", ex
+MessageManager = require './lib/MessageManager'
+MessageManager.on ['attachment', 'message'], (err, data) ->
+  Chat.broadcast data.message if not err
 
-  # Attachment received
-  if key is 'Chat.attachment'
-    for message in data
-      Chat.broadcast message
-
-  # Close received
-  if key is 'session.close'
-    console.log 'session.close', data.id
-    Chat.destroy data.id
+MessageManager.on ['handshake', 'session'], (err, data) ->
+  Chat.loadSessions user
 
 ###
   AMQP --------------------------------------------------------------
 ###
 
-exchange = 'amq.topic'
-keys = ['Chat.attachment', 'session.close']
+amqp = require './lib/amqp'
+amqp.connect Config.amqp
 
-connectAMQP = (n = 0) ->
-  amqp.connect(Config.amqp.url).then (conn) ->
-    conn.createChannel().then (ch) ->
-      ok = ch.assertExchange exchange, 'topic', durable: true
-      ok = ok.then ->
-        ch.assertQueue '', exclusive: true
-      ok = ok.then (qok) ->
-        queue = qok.queue
-        t = all keys.map (rk) -> ch.bindQueue queue, exchange, rk
-        t.then -> queue
-      ok = ok.then (queue) ->
-        ch.consume queue, amqpHandler
-      return ok.then ->
-        console.info 'AMQP listening'
-  .then null, (err) ->
-    # 10 retries
-    if n < 9
-      console.warn "AMQP. Retry #{n+1} after:", err
-      n = n + 1
-      process.nextTick ->
-        connectAMQP n
-    else
-      console.error 'AMQP. No more retries after:', err
+# Attachment received
+amqp.on 'chat.attachment', (err, data) ->
+  for message in data
+    Chat.broadcast message
 
-connectAMQP 0
+# Close received
+amqp.on 'session.close', (err, data) ->
+  console.log 'session.close', data.id
+  Chat.destroy data.id
 
 ###
   WEBSOCKETS --------------------------------------------------------
