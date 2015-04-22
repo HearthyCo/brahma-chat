@@ -16,9 +16,6 @@ Chat = require './lib/ChatActions'
 
 Chat.connect Config
 
-# Avoid coffeelint-undefined-variable bug #4
-ex = ex or null
-
 ###
   AMQP HANDLER ------------------------------------------------------
 ###
