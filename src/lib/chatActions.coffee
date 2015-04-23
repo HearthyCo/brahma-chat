@@ -37,7 +37,7 @@ module.exports = actions =
     console.error "Error: Connect first" if not redisClient
 
     # sessions
-    sockets = sockets or Database.sessionSockets.get message.session
+    sockets = sockets or Database.sessionUsers.getSockets message.session
     # Avoid echo, exclude author connection
     excludeSockets = excludeSockets or Database.userSockets.get message.author
 
@@ -59,7 +59,7 @@ module.exports = actions =
     console.error "Error: Connect first" if not redisClient
 
     ts = Date.now()
-    for listener in Database.sessionSockets.get sessionId
+    for listener in Database.sessionUsers.getSockets sessionId
       # Bump signature validity so users can't re-join
       PapersPlease.checkSignatureValidity listener.user.id, 'sessions', ts
       # Send kick notification
@@ -69,7 +69,7 @@ module.exports = actions =
         status: 1000
         data: session: data.id
     # Destroy session
-    Database.sessionSockets.destroy sessionId
+    Database.sessionUsers.destroy sessionId
     eventHandler.trigger 'destroy', null, {}
 
   # Load user's sessions messages
@@ -78,11 +78,11 @@ module.exports = actions =
 
     multi = redisClient.multi()
     for userSession in user.sessions
-      if Database.sessionSockets.get userSession
+      if Database.sessionUsers.getSockets userSession
         multi.lrange ('session_' + userSession), 0, -1
 
-      if not Database.sessionSockets.has userSession, user.connection
-        Database.sessionSockets.add userSession, user.connection
+      if not Database.sessionUsers.hasSocket userSession, user.connection
+        Database.sessionUsers.add userSession, user
 
     multi.exec (err, results) ->
       messagesHistory = []

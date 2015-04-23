@@ -70,6 +70,10 @@ amqp.on 'sessions.users', 'users', (err, data) ->
     if not sessionId in _new
       Database.sessionUsers.destroy sessionId
 
+amqp.on 'sessions.pools', 'broadcast', (err, data) ->
+  console.log 'sessions.pools', data.serviceTypes
+  console.error 'TODO: Broadcast to professionals'
+
 amqp.on '*', (evt) ->
   console.log "amqp event [" + evt + "] triggered"
 
@@ -160,3 +164,4 @@ wsServer.on 'request', (request) ->
       Database.client.remove index
       # remove user socket from list
       Database.userSockets.remove user.id, connection
+      Database.sessionUsers.remove user.sessions, user

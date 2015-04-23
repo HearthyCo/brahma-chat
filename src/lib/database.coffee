@@ -1,5 +1,14 @@
 # Local Data
 
+oneOrMore = (arr, cb) ->
+  _ret = []
+  if 'object' is typeof arr
+    for a in arr
+      _ret.push cb(a)
+  else
+    _ret = cb(arr)
+  return _ret
+
 # Manage object lists
 crud = (dbObj) ->
   # collection
@@ -25,13 +34,13 @@ crud = (dbObj) ->
     if arguments.length is 1
       item = id
       id = @id
-    ret = []
-    _obj = dbObj[id]
-    if _obj
-      pos = _obj.indexOf item
-      if pos >= 0
-        ret = _obj.splice pos, 1
-        dbObj[id] = _obj
+    ret = oneOrMore id, (a) ->
+      _obj = dbObj[a]
+      if _obj
+        pos = _obj.indexOf item
+        if pos >= 0
+          ret = _obj.splice pos, 1
+          dbObj[a] = _obj
     return ret
   has: (id, item) ->
     if arguments.length is 1
@@ -45,8 +54,6 @@ dbObj = do ->
   clients = []
   # user: [sockets]
   userSockets = {}
-  # session: [sockets]
-  sessionSockets = {}
   # session: [allowed users]
   sessionUsers = {}
 
@@ -59,10 +66,14 @@ dbObj = do ->
 
     # ------- user sockets
     userSockets: crud.call @, userSockets
-    # ------- session sockets
-    sessionSockets: crud.call @, sessionSockets
     # ------- session users
     sessionUsers: crud.call @, sessionUsers
+
+  iface.sessionUsers.getSockets = (id) ->
+    (user.connection for user in iface.sessionUsers.get(id))
+
+  iface.sessionUsers.hasSocket = (id, socket) ->
+    (socket in (user.connection for user in iface.sessionUsers.get(id)))
 
   return iface
 

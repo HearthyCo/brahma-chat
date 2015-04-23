@@ -6,7 +6,11 @@ eventHandler = require('got-events')()
 module.exports = amqp =
   config: {}
   exchange: 'amq.topic'
-  keys: ['chat.attachment', 'session.close', 'session.users', 'sessions.users']
+  keys: [
+    'chat.attachment'
+    'session.close', 'session.users'
+    'sessions.users', 'sessions.pools'
+  ]
 
   _reconnections: 0
   connection: null

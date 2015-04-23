@@ -56,6 +56,14 @@ module.exports = manager = (message, user) ->
           message.data
         return user.connection.sendUTF utils.mkResponse 4010, id
 
+      if message.data.message is '/status'
+        return console.log (((user) ->
+          id: user.id
+          role: user.role
+          sessions: user.sessions
+          name: user.name
+          ) user for user in (Database.sessionUsers.get message.session))
+
       eventHandler.trigger 'message', null,
         user: user, message: message
 
