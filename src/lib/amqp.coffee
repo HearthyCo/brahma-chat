@@ -6,7 +6,7 @@ eventHandler = require('simple-events')()
 module.exports = amqp =
   config: {}
   exchange: 'amq.topic'
-  keys: ['chat.attachment', 'session.close']
+  keys: ['chat.attachment', 'session.close', 'session.users', 'sessions.users']
 
   _reconnections: 0
   connection: null
