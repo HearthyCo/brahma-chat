@@ -93,7 +93,7 @@ module.exports = actions =
               try
                 messagesHistory.push JSON.parse messageResult
               catch ex
-                console.log 'Error parse:', messageResult
+                console.error 'Error parse:', messageResult
 
         user.connection.sendUTF utils.mkResponse 2000, messageId,
           'joined', null,

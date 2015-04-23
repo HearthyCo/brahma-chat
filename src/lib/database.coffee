@@ -3,15 +3,17 @@
 # Manage object lists
 crud = (dbObj) ->
   # collection
-  get: (id = @id) -> this[id] or []
+  getIds: -> Object.keys dbObj
+  getAll: -> dbObj
+  get: (id = @id) -> dbObj[id] or []
   set: (id, content) ->
     if arguments.length is 1
       content = id
       id = @id
-    this[id] = content or []
+    dbObj[id] = content or []
   destroy: (id) ->
-    this[id] = undefined
-    delete this[id]
+    dbObj[id] = undefined
+    delete dbObj[id]
   # item
   add: (id, content) ->
     if arguments.length is 1
@@ -39,11 +41,14 @@ crud = (dbObj) ->
 
 # Lists of currently connected clients and sessions
 dbObj = do ->
+  # [sockets]
   clients = []
-  # opened sockets
-  sockets = {}
-  # list of currently connected sessions
-  sessions = {}
+  # user: [sockets]
+  userSockets = {}
+  # session: [sockets]
+  sessionSockets = {}
+  # session: [allowed users]
+  sessionUsers = {}
 
   iface =
     client:
@@ -53,32 +58,11 @@ dbObj = do ->
         clients.slice clientIndex, 1
 
     # ------- user sockets
-    userSockets:
-      get: (userId) ->
-        crud(sockets).get.apply @, [userId]
-      set: (userId, socket) ->
-        crud(sockets).set.apply @, [userId, socket]
-      destroy: (userId) ->
-        crud(sockets).destroy.apply @, [userId]
-      add: (userId, socket) ->
-        crud(sockets).add.apply @, [userId, socket]
-      remove: (userId, socket) ->
-        crud(sockets).remove.apply @, [userId, socket]
-
+    userSockets: crud.call @, userSockets
     # ------- session sockets
-    sessionSockets:
-      get: (sessionId) ->
-        crud(sockets).get.apply @, [sessionId]
-      set: (sessionId, content) ->
-        crud(sockets).set.apply @, [sessionId, content]
-      destroy: (sessionId) ->
-        crud(sockets).destroy.apply @, [sessionId]
-      has: (sessionId, socket) ->
-        crud(sockets).has.apply @, [sessionId, socket]
-      add: (sessionId, socket) ->
-        crud(sockets).add.apply @, [sessionId, socket]
-      remove: (sessionId, socket) ->
-        crud(sockets).remove.apply @, [sessionId, socket]
+    sessionSockets: crud.call @, sessionSockets
+    # ------- session users
+    sessionUsers: crud.call @, sessionUsers
 
   return iface
 

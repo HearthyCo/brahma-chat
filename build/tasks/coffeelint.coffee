@@ -7,7 +7,7 @@ module.exports = ->
       undefined_variables:
         module: "coffeelint-undefined-variables"
         level: "warn"
-        globals: ["module", "console", "process", "require", "ex", "Buffer"]
+        globals: ["module", "console", "process", "require", "ex", "root"]
       variable_scope:
         module: "coffeelint-variable-scope"
         level: "warn"

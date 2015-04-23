@@ -15,11 +15,14 @@ module.exports = amqp =
 
   #--- Setup
   connect: (config = amqp.config) ->
-    amqplib.connect(config.url).then (conn) ->
+    amqplib
+    .connect(config.url)
+    .then (conn) ->
       amqp.connection = conn
       amqp._listen conn
       amqp._append conn
       amqp._reconnections = 0
+      eventHandler.trigger.call amqp, 'connect', null, amqp
     .then null, amqp.onConnectFail
 
   _listen: (conn) ->
@@ -36,23 +39,25 @@ module.exports = amqp =
       .then (queue) ->
         amqp.channelR.consume queue, amqp.onReceive
       .then ->
-        console.info 'AMQP listening'
+        console.info 'AMQP listen'
+        eventHandler.trigger.call amqp, 'listenReady', null, amqp
 
   _append: (conn) ->
     conn.createConfirmChannel().then (ch) ->
       amqp.channelW = ch
       amqp.channelW.on 'return', amqp.onReturn
+    .then ->
+      console.info 'AMQP append'
+      eventHandler.trigger.call amqp, 'appendReady', null, amqp
 
   #--- Internal events
   onConnectFail: (err) ->
-    # 10 retries
-    if amqp._reconnections < 9
-      amqp._reconnections++
-      console.warn "AMQP. Retry #{amqp._reconnections} after:", err
-      process.nextTick ->
-        amqp.connect amqp.config
-    else
-      console.error 'AMQP. No more retries after:', err
+    amqp._reconnections++
+    console.warn "AMQP. Retry #{amqp._reconnections} after:", err
+    root.setTimeout ->
+      amqp.connect amqp.config
+    , Math.min(1000 * amqp._reconnections, 5000)
+    eventHandler.trigger.call amqp, 'connectFail', null, amqp
 
   onReturn: (err) ->
     console.warn "AMQP. Message returned:", err
@@ -75,7 +80,7 @@ module.exports = amqp =
     if "string" is not typeof payload
       payload = JSON.stringify payload
 
-    amqp.channelW.publish amqp.exchange, key, new Buffer(payload), {},
+    amqp.channelW.publish amqp.exchange, key, new root.Buffer(payload), {},
       amqp.onProcessed
 
 amqp.on = eventHandler.on

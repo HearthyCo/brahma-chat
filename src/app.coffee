@@ -16,6 +16,9 @@ Database = require './lib/database'
 Chat = require './lib/chatActions'
 Chat.connect Config
 
+Chat.on '*', (evt) ->
+  console.log "amqp event [" + evt + "] triggered"
+
 ###
   MESSAGE MANAGER ---------------------------------------------------
 ###
@@ -27,12 +30,19 @@ MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
 MessageManager.on ['handshake', 'session'], 'loadSession', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
 
+MessageManager.on '*', (evt) ->
+  console.log "MessageManager event [" + evt + "] triggered"
+
 ###
   AMQP --------------------------------------------------------------
 ###
 
 amqp = require './lib/amqp'
 amqp.connect Config.amqp
+
+# Connected and ready to publish
+amqp.on 'appendReady', 'requestSessions', ->
+  amqp.publish 'request.sessions.users', {}
 
 # Attachment received
 amqp.on 'chat.attachment', 'broadcast', (err, data) ->
@@ -43,6 +53,25 @@ amqp.on 'chat.attachment', 'broadcast', (err, data) ->
 amqp.on 'session.close', 'destroy', (err, data) ->
   console.log 'session.close', data.id
   Chat.destroy data.id
+
+amqp.on 'session.users', 'users', (err, data) ->
+  console.log 'session.users', data.id, data.userIds
+  Database.sessionUsers.set data.id, data.userIds
+
+amqp.on 'sessions.users', 'users', (err, data) ->
+  console.log 'sessions.users', data
+  _old = Database.sessionUsers.getIds()
+  _new = Object.keys data.sessions
+  # save new
+  for sessionId, userIds of data.sessions
+    Database.sessionUsers.set sessionId, userIds
+  # remove old
+  for sessionId of _old
+    if not sessionId in _new
+      Database.sessionUsers.destroy sessionId
+
+amqp.on '*', (evt) ->
+  console.log "amqp event [" + evt + "] triggered"
 
 ###
   WEBSOCKETS --------------------------------------------------------
