@@ -4,10 +4,7 @@ Database = require './Database'
 PapersPlease = require './PapersPlease'
 utils = require './utils'
 
-# Events
-_on = {}
-_trigger = (ev, err, payload) ->
-  _on[ev](err, payload) if _on[ev]
+eventHandler = require('simple-events')()
 
 ###
   REDIS -------------------------------------------------------------
@@ -32,7 +29,7 @@ module.exports = actions =
       else
         console.info 'Redis connected'
 
-      _trigger 'connect', err, {}
+      eventHandler.trigger 'connect', err, {}
 
   # Broadcasts a message to every socket,
   # except author
@@ -55,7 +52,7 @@ module.exports = actions =
       if listener not in excludeSockets
         listener.sendUTF JSON.stringify message
 
-    _trigger 'broadcast', null, {}
+    eventHandler.trigger 'broadcast', null, {}
 
   # Closes a session
   destroy: (sessionId) ->
@@ -73,10 +70,10 @@ module.exports = actions =
         data: session: data.id
     # Destroy session
     Database.sessionSockets.destroy sessionId
-    _trigger 'destroy', null, {}
+    eventHandler.trigger 'destroy', null, {}
 
   # Load user's sessions messages
-  loadSessions: (user) ->
+  loadSessions: (user, messageId) ->
     console.error "Error: Connect first" if not redisClient
 
     multi = redisClient.multi()
@@ -98,29 +95,14 @@ module.exports = actions =
               catch ex
                 console.log 'Error parse:', messageResult
 
-        user.connection.sendUTF utils.mkResponse 2000, id, 'joined', null,
+        user.connection.sendUTF utils.mkResponse 2000, messageId,
+          'joined', null,
           messages: messagesHistory
       else
         console.error "Error loading user sessions", err
 
-      _trigger 'loadSessions', err,
+      eventHandler.trigger 'loadSessions', err,
         user: user, history: messagesHistory
 
-# Events
-actions.on = (ev, callback) ->
-  if 'object' is typeof ev
-    ev.forEach (e) ->
-      _on[e] = callback if 'function' is typeof callback
-    return true
-  else
-    _on[ev] = callback if 'function' is typeof callback
-  return _on[ev]
-
-actions.off = (ev) ->
-  if 'object' is typeof ev
-    ev.forEach (e) ->
-      _on[e] = undefined
-      delete _on[e]
-  else
-    _on[ev] = undefined
-    delete _on[ev]
+actions.on = eventHandler.on
+actions.off = eventHandler.off

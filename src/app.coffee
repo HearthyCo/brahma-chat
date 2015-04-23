@@ -21,11 +21,11 @@ Chat.connect Config
 ###
 
 MessageManager = require './lib/MessageManager'
-MessageManager.on ['attachment', 'message'], (err, data) ->
+MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
   Chat.broadcast data.message if not err
 
-MessageManager.on ['handshake', 'session'], (err, data) ->
-  Chat.loadSessions data.user if not err
+MessageManager.on ['handshake', 'session'], 'loadSession', (err, data) ->
+  Chat.loadSessions data.user, data.message.id if not err
 
 ###
   AMQP --------------------------------------------------------------
@@ -35,12 +35,12 @@ amqp = require './lib/amqp'
 amqp.connect Config.amqp
 
 # Attachment received
-amqp.on 'chat.attachment', (err, data) ->
+amqp.on 'chat.attachment', 'broadcast', (err, data) ->
   for message in data
     Chat.broadcast message
 
 # Close received
-amqp.on 'session.close', (err, data) ->
+amqp.on 'session.close', 'destroy', (err, data) ->
   console.log 'session.close', data.id
   Chat.destroy data.id
 

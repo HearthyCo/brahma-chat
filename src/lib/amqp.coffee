@@ -1,10 +1,7 @@
 amqplib = require 'amqplib'
 all = (require 'when').all
 
-# Events
-_on = {}
-_trigger = (ev, err, payload) ->
-  _on[ev](err, payload) if _on[ev]
+eventHandler = require('simple-events')()
 
 module.exports = amqp =
   config: {}
@@ -59,7 +56,7 @@ module.exports = amqp =
 
   onReturn: (err) ->
     console.warn "AMQP. Message returned:", err
-    @connection?.close()
+    amqp.connection?.close()
 
   onReceive: (msg) ->
     key = msg.fields.routingKey
@@ -68,10 +65,7 @@ module.exports = amqp =
     catch ex
       console.error "AMQP. onReceive. JSON.parse:", ex
 
-    if _on[key]
-      _on[key].call amqp, null, data
-    else
-      console.log "AMQP. Unknown event:", key
+    eventHandler.trigger.call amqp, key, null, data
 
   onProcessed: (err) ->
     console.log "AMQP. Message processed", err
@@ -84,21 +78,5 @@ module.exports = amqp =
     amqp.channelW.publish amqp.exchange, key, new Buffer(payload), {},
       amqp.onProcessed
 
-# Events
-amqp.on = (ev, callback) ->
-  if 'object' is typeof ev
-    ev.forEach (e) ->
-      _on[e] = callback if 'function' is typeof callback
-    return true
-  else
-    _on[ev] = callback if 'function' is typeof callback
-  return _on[ev]
-
-amqp.off = (ev) ->
-  if 'object' is typeof ev
-    ev.forEach (e) ->
-      _on[e] = undefined
-      delete _on[e]
-  else
-    _on[ev] = undefined
-    delete _on[ev]
+amqp.on = eventHandler.on
+amqp.off = eventHandler.off
