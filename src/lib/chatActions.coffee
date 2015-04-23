@@ -1,7 +1,7 @@
-Config = require './Config'
+Config = require './config'
 redis = require 'redis'
-Database = require './Database'
-PapersPlease = require './PapersPlease'
+Database = require './database'
+PapersPlease = require './papersPlease'
 utils = require './utils'
 
 eventHandler = require('simple-events')()

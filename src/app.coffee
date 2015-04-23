@@ -6,21 +6,21 @@ WebSocketServer = require('websocket').server
 http = require 'http'
 utils = require './lib/utils'
 
-PapersPlease = require './lib/PapersPlease'
-Config = require './lib/Config'
-Database = require './lib/Database'
+PapersPlease = require './lib/papersPlease'
+Config = require './lib/config'
+Database = require './lib/database'
 
 ###
   CHAT --------------------------------------------------------------
 ###
-Chat = require './lib/ChatActions'
+Chat = require './lib/chatActions'
 Chat.connect Config
 
 ###
   MESSAGE MANAGER ---------------------------------------------------
 ###
 
-MessageManager = require './lib/MessageManager'
+MessageManager = require './lib/messageManager'
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
   Chat.broadcast data.message if not err
 

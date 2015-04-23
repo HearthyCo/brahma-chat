@@ -1,6 +1,6 @@
-Database = require './Database'
-Chat = require './ChatActions'
-PapersPlease = require './PapersPlease'
+Database = require './database'
+Chat = require './chatActions'
+PapersPlease = require './papersPlease'
 utils = require './utils'
 
 eventHandler = require('simple-events')()
