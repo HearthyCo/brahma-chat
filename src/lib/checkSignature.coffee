@@ -1,5 +1,5 @@
 crypto = require 'crypto'
-secret = require('./Config').secret
+secret = require('./config').secret
 
 ###
   public class Signing {
