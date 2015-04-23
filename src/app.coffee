@@ -17,7 +17,7 @@ Chat = require './lib/chatActions'
 Chat.connect Config
 
 Chat.on '*', (evt) ->
-  console.log "amqp event [" + evt + "] triggered"
+  console.log "Chat event [" + evt + "] triggered"
 
 ###
   MESSAGE MANAGER ---------------------------------------------------

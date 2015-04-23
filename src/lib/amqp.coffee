@@ -1,5 +1,5 @@
 amqplib = require 'amqplib'
-all = (require 'when').all
+_when = require 'when'
 
 eventHandler = require('simple-events')()
 
@@ -19,10 +19,13 @@ module.exports = amqp =
     .connect(config.url)
     .then (conn) ->
       amqp.connection = conn
-      amqp._listen conn
-      amqp._append conn
-      amqp._reconnections = 0
-      eventHandler.trigger.call amqp, 'connect', null, amqp
+      _when.all [
+        amqp._listen conn
+        amqp._append conn
+      ]
+      .then ->
+        amqp._reconnections = 0
+        eventHandler.trigger.call amqp, 'connect', null, amqp
     .then null, amqp.onConnectFail
 
   _listen: (conn) ->
@@ -33,9 +36,9 @@ module.exports = amqp =
         amqp.channelR.assertQueue '', exclusive: true
       .then (qok) ->
         queue = qok.queue
-        t = all amqp.keys.map (key) ->
+        binds = _when.map amqp.keys, (key) ->
           amqp.channelR.bindQueue queue, amqp.exchange, key
-        t.then -> queue
+        binds.then -> queue
       .then (queue) ->
         amqp.channelR.consume queue, amqp.onReceive
       .then ->
