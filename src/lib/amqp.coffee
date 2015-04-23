@@ -1,7 +1,7 @@
 amqplib = require 'amqplib'
 _when = require 'when'
 
-eventHandler = require('simple-events')()
+eventHandler = require('got-events')()
 
 module.exports = amqp =
   config: {}

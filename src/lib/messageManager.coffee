@@ -3,7 +3,7 @@ Chat = require './chatActions'
 PapersPlease = require './papersPlease'
 utils = require './utils'
 
-eventHandler = require('simple-events')()
+eventHandler = require('got-events')()
 
 module.exports = manager = (message, user) ->
 

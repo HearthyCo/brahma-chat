@@ -4,7 +4,7 @@ Database = require './database'
 PapersPlease = require './papersPlease'
 utils = require './utils'
 
-eventHandler = require('simple-events')()
+eventHandler = require('got-events')()
 
 ###
   REDIS -------------------------------------------------------------
