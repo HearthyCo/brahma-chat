@@ -103,6 +103,14 @@ dbObj = do ->
       offline: offline
     }
 
+  iface.userSockets.getProfessionals = ->
+    professionals = (id for id, info of users when info.role is 'professional')
+    sockets = []
+    for uid in professionals
+      for socket in userSockets[uid]
+        sockets.push socket
+    sockets
+
   return iface
 
 module.exports = dbObj
