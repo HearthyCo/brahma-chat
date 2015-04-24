@@ -29,7 +29,7 @@ crud = (dbObj) ->
       content = id
       id = @id
     dbObj[id] = dbObj[id] or []
-    if not content in dbObj[id]
+    if content not in dbObj[id]
       dbObj[id].push content
   remove: (id, item) ->
     if arguments.length is 1
@@ -84,6 +84,14 @@ dbObj = do ->
 
   iface.sessionUsers.getSockets = (id) ->
     (iface.userSockets.get userId for userId in iface.sessionUsers.get(id))
+
+  iface.userSockets.getProfessionals = ->
+    professionals = (id for id, info of users when info.role is 'professional')
+    sockets = []
+    for uid in professionals
+      for socket in userSockets[uid]
+        sockets.push socket
+    sockets
 
   return iface
 

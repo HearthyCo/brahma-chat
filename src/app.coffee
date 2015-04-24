@@ -73,11 +73,12 @@ amqp.on 'sessions.users', 'users', (err, data) ->
 
 amqp.on 'sessions.pools', 'broadcast', (err, data) ->
   console.log 'sessions.pools', data.serviceTypes
-  # Chat.notice Database.userSockets.getProfessionals(),
-  #   id: null
-  #   type: 'pools'
-  #   status: 1000
-  #   data: serviceTypes: data.serviceTypes
+  Chat.notice
+    id: null
+    type: 'pools'
+    status: 1000
+    data: serviceTypes: data.serviceTypes,
+    Database.userSockets.getProfessionals()
 
 amqp.on '*', (evt) ->
   console.log "amqp event [" + evt + "] triggered"
