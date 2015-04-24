@@ -3,7 +3,6 @@ redis = require 'redis'
 Database = require './database'
 PapersPlease = require './papersPlease'
 utils = require './utils'
-_ = require 'underscore'
 
 eventHandler = require('got-events')()
 
@@ -34,17 +33,17 @@ module.exports = actions =
 
   # Broadcasts a message to every socket,
   # except author
-  broadcast: (message, socketsPerUser, excludeSockets) ->
+  broadcast: (message, echo = false) ->
     console.error "Error: Connect first" if not redisClient
 
-    # sessions
-    sockets = _.flatten(
-      socketsPerUser or Database.sessionUsers.getSockets message.session
-    )
+    # session users
+    sockets = Database.sessionUsers.getSockets message.session
+    states = Database.sessionUsers.getConnStates message.session
 
     # Avoid echo, exclude author connection
-    excludeSockets = excludeSockets or
-      Database.userSockets.get message.author
+    excludeSockets = []
+    if not echo
+      excludeSockets = Database.userSockets.get message.author
 
     console.log message.type, message.id
     message.timestamp = Date.now()
@@ -57,7 +56,9 @@ module.exports = actions =
       if socket not in excludeSockets
         socket.sendUTF JSON.stringify message
 
-    eventHandler.trigger 'broadcast', null, {}
+    eventHandler.trigger 'broadcast', null,
+      undelivered: states.offline
+      message: message
 
   # Broadcasts a notice to every socket
   notice: (message, sockets) ->

@@ -1,3 +1,5 @@
+_ = require 'underscore'
+
 # Local Data
 
 oneOrMore = (arr, cb) ->
@@ -29,7 +31,7 @@ crud = (dbObj) ->
       content = id
       id = @id
     dbObj[id] = dbObj[id] or []
-    if not content in dbObj[id]
+    if content not in dbObj[id]
       dbObj[id].push content
   remove: (id, item) ->
     if arguments.length is 1
@@ -75,6 +77,8 @@ dbObj = do ->
         delete users[userId]
       get: (userId) ->
         users[userId]
+      has: (userId) ->
+        return if users[userId] then true else false
       getIds: -> Object.keys users
 
     # ------- user sockets
@@ -83,7 +87,21 @@ dbObj = do ->
     sessionUsers: crud.call @, sessionUsers
 
   iface.sessionUsers.getSockets = (id) ->
-    (iface.userSockets.get userId for userId in iface.sessionUsers.get(id))
+    online = iface.sessionUsers.getConnStates(id).online
+    _.flatten(
+      iface.userSockets.get userId for userId in online
+    ) or []
+
+  iface.sessionUsers.getConnStates = (id) ->
+    allowed = iface.sessionUsers.get id
+    connected = iface.users.getIds()
+    offline = _.difference allowed, connected
+    online = _.difference allowed, offline
+
+    return {
+      online: online
+      offline: offline
+    }
 
   return iface
 

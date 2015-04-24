@@ -11,19 +11,30 @@ Config = require './lib/config'
 Database = require './lib/database'
 
 ###
-  CHAT --------------------------------------------------------------
+  SERVICES ----------------------------------------------------------
 ###
+
+amqp = require './lib/amqp'
+amqp.connect Config.amqp
+
 Chat = require './lib/chatActions'
 Chat.connect Config
+
+MessageManager = require './lib/messageManager'
+
+###
+  EVENTS ------------------------------------------------------------
+###
+
+# CHAT -------------------
+Chat.on 'broadcast', (err, data) ->
+  if data and data.undelivered
+    amqp.publish 'chat.activity', data
 
 Chat.on '*', (evt) ->
   console.log "Chat event [" + evt + "] triggered"
 
-###
-  MESSAGE MANAGER ---------------------------------------------------
-###
-
-MessageManager = require './lib/messageManager'
+# MESSAGEMANAGER ---------
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
   Chat.broadcast data.message if not err
 
@@ -33,10 +44,7 @@ MessageManager.on ['handshake', 'session'], 'loadSession', (err, data) ->
 MessageManager.on '*', (evt) ->
   console.log "MessageManager event [" + evt + "] triggered"
 
-###
-  AMQP --------------------------------------------------------------
-###
-
+# AMQP ---------------------
 amqp = require './lib/amqp'
 amqp.connect Config.amqp
 
@@ -68,7 +76,7 @@ amqp.on 'sessions.users', 'users', (err, data) ->
     Database.sessionUsers.set sessionId, userIds
   # remove old
   for sessionId of _old
-    if not sessionId in _new
+    if sessionId not in _new
       Database.sessionUsers.destroy sessionId
 
 amqp.on 'sessions.pools', 'broadcast', (err, data) ->
