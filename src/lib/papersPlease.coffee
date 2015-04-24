@@ -29,6 +29,8 @@ papersPlease =
         requiredFields = [
           'data.userId',
           'data._userId_sign',
+          'data.userRole',
+          'data._userRole_sign',
           'data.sessions',
           'data._sessions_sign' ]
       when 'message'
@@ -75,8 +77,10 @@ papersPlease =
 
     uid = data.userId
     userIdTs = data._userId_sign.substring 44
+    userRoleTs = data._userRole_sign.substring 44
     sessionsTs = data._sessions_sign.substring 44
     return false if not @checkSignatureValidity uid, 'userId', userIdTs
+    return false if not @checkSignatureValidity uid, 'userRole', userRoleTs
     return false if not @checkSignatureValidity uid, 'sessions', sessionsTs
 
     return true
@@ -95,6 +99,5 @@ papersPlease =
     return false if userMinTimestamps[userId][kind]? > newTimestamp
     userMinTimestamps[userId][kind] = newTimestamp
     true
-
 
 module.exports = exports = papersPlease

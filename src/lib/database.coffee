@@ -29,7 +29,8 @@ crud = (dbObj) ->
       content = id
       id = @id
     dbObj[id] = dbObj[id] or []
-    dbObj[id].push content
+    if not content in dbObj[id]
+      dbObj[id].push content
   remove: (id, item) ->
     if arguments.length is 1
       item = id
@@ -39,7 +40,7 @@ crud = (dbObj) ->
       if _obj
         pos = _obj.indexOf item
         if pos >= 0
-          ret = _obj.splice pos, 1
+          _obj.splice pos, 1
           dbObj[a] = _obj
     return ret
   has: (id, item) ->
@@ -51,18 +52,30 @@ crud = (dbObj) ->
 # Lists of currently connected clients and sessions
 dbObj = do ->
   # [sockets]
-  clients = []
-  # user: [sockets]
+  connections = []
+  # user.id: user
+  users = {}
+  # user.id: [sockets]
   userSockets = {}
-  # session: [allowed users]
+  # session.id: [allowed users.ids]
   sessionUsers = {}
 
   iface =
-    client:
-      add: (client) ->
-        clients.push(client) - 1
-      remove: (clientIndex) ->
-        clients.slice clientIndex, 1
+    connections:
+      add: (connection) ->
+        connections.push(connection) - 1
+      remove: (connectionIndex) ->
+        connections.splice connectionIndex, 1
+
+    users:
+      add: (user) ->
+        users[user.id] = user
+      remove: (userId) ->
+        users[userId] = undefined
+        delete users[userId]
+      get: (userId) ->
+        users[userId]
+      getIds: -> Object.keys users
 
     # ------- user sockets
     userSockets: crud.call @, userSockets
@@ -70,10 +83,7 @@ dbObj = do ->
     sessionUsers: crud.call @, sessionUsers
 
   iface.sessionUsers.getSockets = (id) ->
-    (user.connection for user in iface.sessionUsers.get(id))
-
-  iface.sessionUsers.hasSocket = (id, socket) ->
-    (socket in (user.connection for user in iface.sessionUsers.get(id)))
+    (iface.userSockets.get userId for userId in iface.sessionUsers.get(id))
 
   return iface
 

@@ -62,6 +62,7 @@ amqp.on 'sessions.users', 'users', (err, data) ->
   console.log 'sessions.users', data
   _old = Database.sessionUsers.getIds()
   _new = Object.keys data.sessions
+  # TODO: Save user sessions in each user
   # save new
   for sessionId, userIds of data.sessions
     Database.sessionUsers.set sessionId, userIds
@@ -72,7 +73,11 @@ amqp.on 'sessions.users', 'users', (err, data) ->
 
 amqp.on 'sessions.pools', 'broadcast', (err, data) ->
   console.log 'sessions.pools', data.serviceTypes
-  console.error 'TODO: Broadcast to professionals'
+  # Chat.notice Database.userSockets.getProfessionals(),
+  #   id: null
+  #   type: 'pools'
+  #   status: 1000
+  #   data: serviceTypes: data.serviceTypes
 
 amqp.on '*', (evt) ->
   console.log "amqp event [" + evt + "] triggered"
@@ -106,16 +111,13 @@ wsServer.on 'request', (request) ->
     return request.reject()
 
   connection = request.accept null, request.origin
-  index = Database.client.add connection
+  index = Database.connections.add connection
 
   # User data initialization
   user =
     role: 'client'
     id: null
-    name: null
     sessions: {}
-    auth: false
-    connection: connection
 
   console.log 'Connection accepted.'
 
@@ -151,7 +153,7 @@ wsServer.on 'request', (request) ->
 
         # Send to MessageManager
         console.log message.type, message.id
-        MessageManager message, user
+        MessageManager message, user, connection
 
     else
       console.warn 'Message type:', messageString.type
@@ -161,7 +163,11 @@ wsServer.on 'request', (request) ->
       console.log 'Peer', connection.remoteAddress,
         'disconnected.', reasonCode, description
       # remove connection
-      Database.client.remove index
+      Database.connections.remove index
       # remove user socket from list
       Database.userSockets.remove user.id, connection
-      Database.sessionUsers.remove user.sessions, user
+
+      if not Database.userSockets.get(user.id).length
+        Database.users.remove user.id
+
+      Database.sessionUsers.remove user.sessions, user.id

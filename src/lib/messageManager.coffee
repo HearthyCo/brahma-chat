@@ -5,17 +5,39 @@ utils = require './utils'
 
 eventHandler = require('got-events')()
 
-module.exports = manager = (message, user) ->
+module.exports = manager = (message, user, connection) ->
 
   id = message.id + ''
+
+  payback = user: user, message: message, connection: connection
 
   console.log message.type, message.id, message
   switch message.type
     # PING? PONG!
     when 'ping'
-      user.connection.sendUTF utils.mkResponse 2000, id, 'pong'
-      eventHandler.trigger 'ping', null,
-        user: user, message: message
+      connection.sendUTF utils.mkResponse 2000, id, 'pong'
+      eventHandler.trigger 'ping', null, payback
+
+    # CONNECT
+    when 'handshake'
+      if not PapersPlease.handshake message
+        console.warn message.id, 'Handshake failed signature',
+          message.type, message.data
+        eventHandler.trigger 'handshake',
+          new Error('Handshake failed signature'), payback
+        return connection.sendUTF utils.mkResponse 4010, id
+
+      # Update user
+      user.id = message.data.userId
+      user.role = message.data.userRole
+      # Only if we don't know user sessions
+      user.sessions = user.sessions or message.data.sessions or []
+      # Add user
+      Database.users.add user
+      # Add socket to user socket list
+      Database.userSockets.add user.id, connection
+
+      eventHandler.trigger 'handshake', null, payback
 
     # JOIN
     when 'session'
@@ -24,60 +46,42 @@ module.exports = manager = (message, user) ->
           message.data
         eventHandler.trigger 'session', new Error('Session outdated'),
           user: user, message: message
-        return user.connection.sendUTF utils.mkResponse 4010, id
+        return connection.sendUTF utils.mkResponse 4010, id
 
-      user.sessions = message.data.sessions
-      eventHandler.trigger 'session', null,
-        user: user, message: message
+      # Only if we don't know user sessions
+      user.sessions = user.sessions or message.data.sessions or []
 
-    # CONNECT
-    when 'handshake'
-      if not PapersPlease.handshake message
-        console.warn message.id, 'Handshake failed signature',
-          message.type, message.data
-        eventHandler.trigger 'handshake',
-          new Error('Handshake failed signature'),
-          user: user, message: message
-        return user.connection.sendUTF utils.mkResponse 4010, id
-
-      # Update user
-      user.id = message.data.userId
-      user.sessions = message.data.sessions or []
-      # Add socket to user socket list
-      Database.userSockets.add user.id, user.connection
-
-      eventHandler.trigger 'handshake', null,
-        user: user, message: message
+      eventHandler.trigger 'session', null, payback
 
     # MESSAGE
     when 'message'
       if not PapersPlease.message message, user.sessions
         console.warn message.id, 'Forbidden session', message.type,
           message.data
-        return user.connection.sendUTF utils.mkResponse 4010, id
+        return connection.sendUTF utils.mkResponse 4010, id
 
       if message.data.message is '/status'
-        return console.log (((user) ->
+        return console.log (((userId) ->
+          user = Database.users.get userId
+
           id: user.id
           role: user.role
           sessions: user.sessions
-          name: user.name
-          ) user for user in (Database.sessionUsers.get message.session))
 
-      eventHandler.trigger 'message', null,
-        user: user, message: message
+          ) userId for userId in (Database.sessionUsers.get message.session))
+
+      eventHandler.trigger 'message', null, payback
 
     # ATTACHMENT
     when 'attachment'
       if not PapersPlease.message message, user.sessions
         console.warn message.id, 'Forbidden session', message.type,
           message.data
-        eventHandler.trigger 'attachment', new Error('Forbidden session'),
-          user: user, message: message
-        return user.connection.sendUTF utils.mkResponse 4010, id
+        eventHandler.trigger 'attachment',
+          new Error('Forbidden session'), payback
+        return connection.sendUTF utils.mkResponse 4010, id
 
-      eventHandler.trigger 'attachment', null,
-        user: user, message: message
+      eventHandler.trigger 'attachment', null, payback
 
 # Public events methods
 manager.on = eventHandler.on

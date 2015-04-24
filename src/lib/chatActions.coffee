@@ -3,6 +3,7 @@ redis = require 'redis'
 Database = require './database'
 PapersPlease = require './papersPlease'
 utils = require './utils'
+_ = require 'underscore'
 
 eventHandler = require('got-events')()
 
@@ -33,13 +34,17 @@ module.exports = actions =
 
   # Broadcasts a message to every socket,
   # except author
-  broadcast: (message, sockets, excludeSockets) ->
+  broadcast: (message, socketsPerUser, excludeSockets) ->
     console.error "Error: Connect first" if not redisClient
 
     # sessions
-    sockets = sockets or Database.sessionUsers.getSockets message.session
+    sockets = _.flatten(
+      socketsPerUser or Database.sessionUsers.getSockets message.session
+    )
+
     # Avoid echo, exclude author connection
-    excludeSockets = excludeSockets or Database.userSockets.get message.author
+    excludeSockets = excludeSockets or
+      Database.userSockets.get message.author
 
     console.log message.type, message.id
     message.timestamp = Date.now()
@@ -48,26 +53,40 @@ module.exports = actions =
     redisClient.rpush ('session_' + message.session), JSON.stringify message
 
     # Send it to the peers
-    for listener in sockets
-      if listener not in excludeSockets
-        listener.sendUTF JSON.stringify message
+    for socket in sockets
+      if socket not in excludeSockets
+        socket.sendUTF JSON.stringify message
 
     eventHandler.trigger 'broadcast', null, {}
+
+  # Broadcasts a notice to every socket
+  notice: (message, sockets) ->
+    console.error "Error: Connect first" if not redisClient
+
+    console.log message.type, message.id
+    message.timestamp = Date.now()
+
+    # Send it to the peers
+    for socket in sockets
+      socket.sendUTF JSON.stringify message
+
+    eventHandler.trigger 'notice', null, {}
 
   # Closes a session
   destroy: (sessionId) ->
     console.error "Error: Connect first" if not redisClient
 
     ts = Date.now()
-    for listener in Database.sessionUsers.getSockets sessionId
+    for userId in Database.sessionUsers.get sessionId
       # Bump signature validity so users can't re-join
-      PapersPlease.checkSignatureValidity listener.user.id, 'sessions', ts
+      PapersPlease.checkSignatureValidity userId, 'sessions', ts
       # Send kick notification
-      listener.sendUTF JSON.stringify
-        id: null
-        type: 'kick'
-        status: 1000
-        data: session: data.id
+      for socket in Database.userSockets userId
+        socket.sendUTF JSON.stringify
+          id: null
+          type: 'kick'
+          status: 1000
+          data: session: data.id
     # Destroy session
     Database.sessionUsers.destroy sessionId
     eventHandler.trigger 'destroy', null, {}
@@ -78,11 +97,10 @@ module.exports = actions =
 
     multi = redisClient.multi()
     for userSession in user.sessions
-      if Database.sessionUsers.getSockets userSession
-        multi.lrange ('session_' + userSession), 0, -1
+      multi.lrange ('session_' + userSession), 0, -1
 
-      if not Database.sessionUsers.hasSocket userSession, user.connection
-        Database.sessionUsers.add userSession, user
+      if not Database.sessionUsers.has userSession, user.id
+        Database.sessionUsers.add userSession, user.id
 
     multi.exec (err, results) ->
       messagesHistory = []
@@ -95,9 +113,9 @@ module.exports = actions =
               catch ex
                 console.error 'Error parse:', messageResult
 
-        user.connection.sendUTF utils.mkResponse 2000, messageId,
-          'joined', null,
-          messages: messagesHistory
+        for conn in Database.userSockets.get user.id
+          conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
+            messages: messagesHistory
       else
         console.error "Error loading user sessions", err
 
