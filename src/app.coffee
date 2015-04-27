@@ -80,12 +80,12 @@ amqp.on 'sessions.users', 'users', (err, data) ->
       Database.sessionUsers.destroy sessionId
 
 amqp.on 'sessions.pools', 'broadcast', (err, data) ->
-  console.log 'sessions.pools', data.serviceTypes
+  console.log 'sessions.pools', data.servicetypes
   Chat.notice
     id: null
-    type: 'pools'
+    type: 'update'
     status: 1000
-    data: serviceTypes: data.serviceTypes,
+    data: servicetypes: data.servicetypes,
     Database.userSockets.getProfessionals()
 
 amqp.on '*', (evt) ->
