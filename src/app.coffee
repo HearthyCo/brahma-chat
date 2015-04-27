@@ -49,7 +49,7 @@ MessageManager.on '*', (evt) ->
 # AMQP ---------------------
 
 # Connected and ready to publish
-amqp.on 'appendReady', 'requestSessions', ->
+amqp.on 'connect', 'requestSessions', ->
   amqp.publish 'request.sessions.users', {}
 
 # Attachment received
