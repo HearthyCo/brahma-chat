@@ -99,7 +99,7 @@ module.exports = amqp =
     console.log LOG, "Message processed. Err:", err
 
   publish: (key, payload) ->
-    if "string" is not typeof payload
+    if "string" isnt typeof payload
       payload = JSON.stringify payload
 
     amqp.channelW.publish amqp.exchange, key, new root.Buffer(payload), {},
