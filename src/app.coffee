@@ -67,7 +67,8 @@ amqp.on 'session.close', 'destroy', (err, data) ->
 amqp.on 'session.users', 'users', (err, data) ->
   console.log LOG, 'session.users', data.id, data.userIds
   Database.sessionUsers.set data.id, data.userIds
-  # TODO: update users.sessions
+  # load everything because it can be a join or a leave
+  Database.userSessions.loadFromSessions()
 
 amqp.on 'sessions.users', 'users', (err, data) ->
   console.log LOG, 'sessions.users', data
