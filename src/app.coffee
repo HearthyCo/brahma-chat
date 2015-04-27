@@ -47,8 +47,6 @@ MessageManager.on '*', (evt) ->
   console.log LOG, "MessageManager event [#{evt}] triggered"
 
 # AMQP ---------------------
-amqp = require './lib/amqp'
-amqp.connect Config.amqp
 
 # Connected and ready to publish
 amqp.on 'appendReady', 'requestSessions', ->
