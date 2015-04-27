@@ -6,6 +6,8 @@ utils = require './utils'
 
 eventHandler = require('got-events')()
 
+LOG = "Chat >"
+
 ###
   REDIS -------------------------------------------------------------
 ###
@@ -13,7 +15,7 @@ eventHandler = require('got-events')()
 redisClient = null
 redisConnect = (cfg, callback) ->
   callback = callback or (err) ->
-    console.error 'Redis error', err if err
+    console.error LOG, 'Redis error', err if err
 
   ###coffeelint-variable-scope-ignore###
   redisClient = redis.createClient cfg.port, cfg.host, {}
@@ -25,16 +27,16 @@ module.exports = actions =
     # Open Redis connection
     redisConnect _Config.redis, (err) ->
       if err
-        console.error 'Redis error', err
+        console.error LOG, 'Redis error', err
       else
-        console.info 'Redis connected'
+        console.info LOG, 'Redis connected'
 
       eventHandler.trigger 'connect', err, {}
 
   # Broadcasts a message to every socket,
   # except author
   broadcast: (message, echo = false) ->
-    console.error "Error: Connect first" if not redisClient
+    console.error LOG, "Error: Connect first" if not redisClient
 
     # session users
     sockets = Database.sessionUsers.getSockets message.session
@@ -45,11 +47,11 @@ module.exports = actions =
     if not echo
       excludeSockets = Database.userSockets.get message.author
 
-    console.log message.type, message.id
+    console.log LOG, message.type, message.id
     message.timestamp = Date.now()
 
     # Add to Redis
-    redisClient.rpush ('session_' + message.session), JSON.stringify message
+    redisClient.rpush ("session_#{message.session}"), JSON.stringify message
 
     # Send it to the peers
     for socket in sockets
@@ -62,9 +64,9 @@ module.exports = actions =
 
   # Broadcasts a notice to every socket
   notice: (message, sockets) ->
-    console.error "Error: Connect first" if not redisClient
+    console.error LOG, "Error: Connect first" if not redisClient
 
-    console.log message.type, message.id
+    console.log LOG, message.type, message.id
     message.timestamp = Date.now()
 
     # Send it to the peers
@@ -73,12 +75,15 @@ module.exports = actions =
 
     eventHandler.trigger 'notice', null, {}
 
-  # Closes a session
-  destroy: (sessionId) ->
-    console.error "Error: Connect first" if not redisClient
+  # Kick one or more users from session, userIds are optional
+  kick: (sessionId, userIds) ->
+    userIds = userIds or Database.sessionUsers.get(sessionId)
+
+    if 'object' isnt typeof userIds
+      userIds = [userIds]
 
     ts = Date.now()
-    for userId in Database.sessionUsers.get sessionId
+    for userId in userIds
       # Bump signature validity so users can't re-join
       PapersPlease.checkSignatureValidity userId, 'sessions', ts
       # Send kick notification
@@ -87,21 +92,37 @@ module.exports = actions =
           id: null
           type: 'kick'
           status: 1000
-          data: session: data.id
+          data: session: sessionId
+
+  # Closes a session
+  destroy: (sessionId) ->
+    console.error LOG, "Error: Connect first" if not redisClient
+
+    userIds = Database.sessionUsers.get(sessionId)
+    # Kick users
+    actions.kick sessionId, userIds
+    # Revoke access
+    Database.userSessions.remove userIds, sessionId
     # Destroy session
     Database.sessionUsers.destroy sessionId
+    # Destroyed
     eventHandler.trigger 'destroy', null, {}
 
   # Load user's sessions messages
   loadSessions: (user, messageId) ->
-    console.error "Error: Connect first" if not redisClient
+    console.error LOG, "Error: Connect first" if not redisClient
 
     multi = redisClient.multi()
-    for userSession in user.sessions
-      multi.lrange ('session_' + userSession), 0, -1
+    for userSession in Database.userSessions.get user.id
 
       if not Database.sessionUsers.has userSession, user.id
-        Database.sessionUsers.add userSession, user.id
+        console.error LOG, "loadSessions: Inconsistent DB for #{user.id}!",
+          "sessionUsers:",
+          Database.sessionUsers.get(userSession),
+          "userSessions:",
+          Database.userSessions.get(user.id)
+      else
+        multi.lrange ("session_#{userSession}"), 0, -1
 
     multi.exec (err, results) ->
       messagesHistory = []
@@ -112,13 +133,13 @@ module.exports = actions =
               try
                 messagesHistory.push JSON.parse messageResult
               catch ex
-                console.error 'Error parse:', messageResult
+                console.error LOG, 'Error parse:', messageResult
 
         for conn in Database.userSockets.get user.id
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
             messages: messagesHistory
       else
-        console.error "Error loading user sessions", err
+        console.error LOG, "Error loading user sessions", err
 
       eventHandler.trigger 'loadSessions', err,
         user: user, history: messagesHistory

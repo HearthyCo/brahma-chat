@@ -13,6 +13,9 @@ oneOrMore = (arr, cb) ->
 
 # Manage object lists
 crud = (dbObj) ->
+  # full load
+  load: (dump) ->
+    dbObj = dump or {}
   # collection
   getIds: -> Object.keys dbObj
   getAll: -> dbObj
@@ -52,15 +55,18 @@ crud = (dbObj) ->
     item in (dbObj[id] or [])
 
 # Lists of currently connected clients and sessions
-dbObj = do ->
+database = do ->
   # [sockets]
   connections = []
   # user.id: user
   users = {}
   # user.id: [sockets]
   userSockets = {}
+
   # session.id: [allowed users.ids]
   sessionUsers = {}
+  # user.id: [allowed sessions.ids]
+  userSessions = {}
 
   iface =
     connections:
@@ -80,18 +86,24 @@ dbObj = do ->
       has: (userId) ->
         return if users[userId] then true else false
       getIds: -> Object.keys users
+      getAll: -> users
 
     # ------- user sockets
     userSockets: crud.call @, userSockets
     # ------- session users
     sessionUsers: crud.call @, sessionUsers
+    # ------- user sessions
+    userSessions: crud.call @, userSessions
 
+  # ------- custom
+  # Get sockets from sessionId
   iface.sessionUsers.getSockets = (id) ->
     online = iface.sessionUsers.getConnStates(id).online
     _.flatten(
       iface.userSockets.get userId for userId in online
     ) or []
 
+  # Get userIds online/offline in sessionId
   iface.sessionUsers.getConnStates = (id) ->
     allowed = iface.sessionUsers.get id
     connected = iface.users.getIds()
@@ -103,6 +115,7 @@ dbObj = do ->
       offline: offline
     }
 
+  # Get professional's userIds
   iface.userSockets.getProfessionals = ->
     professionals = (id for id, info of users when info.role is 'professional')
     sockets = []
@@ -111,6 +124,16 @@ dbObj = do ->
         sockets.push socket
     sockets
 
+  # Set [user].sessions from sessionUsers arrays
+  iface.userSessions.loadFromSessions = (_sessionUsers = sessionUsers) ->
+    cache = {}
+    for sessionId, usersAllowed of _sessionUsers
+      for userId in usersAllowed
+        cache[userId] = [] if not cache[userId]
+        cache[userId].push sessionId
+
+    iface.userSessions.load cache
+
   return iface
 
-module.exports = dbObj
+module.exports = database

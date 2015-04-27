@@ -10,6 +10,8 @@ PapersPlease = require './lib/papersPlease'
 Config = require './lib/config'
 Database = require './lib/database'
 
+LOG = "App  >"
+
 ###
   SERVICES ----------------------------------------------------------
 ###
@@ -32,7 +34,7 @@ Chat.on 'broadcast', (err, data) ->
     amqp.publish 'chat.activity', data
 
 Chat.on '*', (evt) ->
-  console.log "Chat event [" + evt + "] triggered"
+  console.log LOG, "Chat event [#{evt}] triggered"
 
 # MESSAGEMANAGER ---------
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
@@ -42,7 +44,7 @@ MessageManager.on ['handshake', 'session'], 'loadSession', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
 
 MessageManager.on '*', (evt) ->
-  console.log "MessageManager event [" + evt + "] triggered"
+  console.log LOG, "MessageManager event [#{evt}] triggered"
 
 # AMQP ---------------------
 amqp = require './lib/amqp'
@@ -59,28 +61,30 @@ amqp.on 'chat.attachment', 'broadcast', (err, data) ->
 
 # Close received
 amqp.on 'session.close', 'destroy', (err, data) ->
-  console.log 'session.close', data.id
+  console.log LOG, 'session.close', data.id
   Chat.destroy data.id
 
 amqp.on 'session.users', 'users', (err, data) ->
-  console.log 'session.users', data.id, data.userIds
+  console.log LOG, 'session.users', data.id, data.userIds
   Database.sessionUsers.set data.id, data.userIds
+  # TODO: update users.sessions
 
 amqp.on 'sessions.users', 'users', (err, data) ->
-  console.log 'sessions.users', data
+  console.log LOG, 'sessions.users', data
   _old = Database.sessionUsers.getIds()
   _new = Object.keys data.sessions
-  # TODO: Save user sessions in each user
+
   # save new
-  for sessionId, userIds of data.sessions
-    Database.sessionUsers.set sessionId, userIds
-  # remove old
+  Database.sessionUsers.load data.sessions
+  Database.userSessions.loadFromSessions data.sessions
+
+  # kick from old
   for sessionId of _old
     if sessionId not in _new
-      Database.sessionUsers.destroy sessionId
+      Chat.kick sessionId
 
 amqp.on 'sessions.pools', 'broadcast', (err, data) ->
-  console.log 'sessions.pools', data.serviceTypes
+  console.log LOG, 'sessions.pools', data.serviceTypes
   Chat.notice
     id: null
     type: 'pools'
@@ -89,19 +93,19 @@ amqp.on 'sessions.pools', 'broadcast', (err, data) ->
     Database.userSockets.getProfessionals()
 
 amqp.on '*', (evt) ->
-  console.log "amqp event [" + evt + "] triggered"
+  console.log LOG, "amqp event [#{evt}] triggered"
 
 ###
   WEBSOCKETS --------------------------------------------------------
 ###
 
 server = http.createServer (request, response) ->
-  console.log 'Received request for', request.url
+  console.log LOG, 'Received request for', request.url
   response.writeHead 404
   response.end()
 
 server.listen Config.ws.port, ->
-  console.log 'Server is listening on port', Config.ws.port
+  console.log LOG, 'Server is listening on port', Config.ws.port
 
 wsServer = new WebSocketServer(
   httpServer: server,
@@ -115,7 +119,7 @@ wsServer = new WebSocketServer(
 
 wsServer.on 'request', (request) ->
   if not PapersPlease.request request
-    console.warn 'Connection from origin',
+    console.warn LOG, 'Connection from origin',
       request.origin, 'rejected'
     return request.reject()
 
@@ -128,15 +132,15 @@ wsServer.on 'request', (request) ->
     id: null
     sessions: {}
 
-  console.log 'Connection accepted.'
+  console.log LOG, 'Connection accepted.'
 
   connection.on 'message', (messageString) ->
-    if messageString.type == 'utf8'
+    if messageString.type is 'utf8'
       # JSON messageString
       try
         messages = JSON.parse messageString.utf8Data
       catch ex
-        console.warn "JSON.parse:", ex
+        console.warn LOG, "JSON.parse:", ex
         return connection.sendUTF utils.mkResponse 4000
 
       if Object.prototype.toString.call(messages) isnt '[object Array]'
@@ -147,36 +151,37 @@ wsServer.on 'request', (request) ->
         # Test if handshake is done
         if not user.id and message.type isnt 'handshake' and
         message.type isnt 'ping'
-          console.warn message.id, 'Before handshake', message.type,
+          console.warn LOG, message.id, 'Before handshake', message.type,
             message.data
           return connection.sendUTF utils.mkResponse 4010
 
         # check if messageString is valid
         # check required fields
         if not PapersPlease.required message, user.id
-          console.warn message.id, 'Missing fields', message.type, message.data
-          return connection.sendUTF utils.mkResponse 4030, (message.id + '')
+          console.warn LOG, message.id, 'Missing fields',
+            message.type, message.data
+          return connection.sendUTF utils.mkResponse 4030, "#{message.id}"
 
         # set author
         message.author = user.id
 
         # Send to MessageManager
-        console.log message.type, message.id
+        console.log LOG, message.type, message.id
         MessageManager message, user, connection
 
     else
-      console.warn 'Message type:', messageString.type
+      console.warn LOG, 'Message type:', messageString.type
 
   connection.on 'close', (reasonCode, description) ->
     if user.id
-      console.log 'Peer', connection.remoteAddress,
+      console.log LOG, 'Peer', connection.remoteAddress,
         'disconnected.', reasonCode, description
+
       # remove connection
       Database.connections.remove index
       # remove user socket from list
       Database.userSockets.remove user.id, connection
 
+      # Remove user if offline
       if not Database.userSockets.get(user.id).length
         Database.users.remove user.id
-
-      Database.sessionUsers.remove user.sessions, user.id

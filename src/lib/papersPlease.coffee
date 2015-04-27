@@ -50,7 +50,7 @@ papersPlease =
 
     # check if userid is equal to id
     userId = object.data.userId if object.type is 'handshake' and not userId?
-    return false if userId + '' isnt object.id.split('.')[0]
+    return false if "#{userId}" isnt object.id.split('.')[0]
 
     return true
 
@@ -90,7 +90,7 @@ papersPlease =
     data = object.data
 
     # check if session is in user sessions allowed
-    return false if not (object.session in sessions)
+    return false if (object.session not in sessions)
 
     return true
 

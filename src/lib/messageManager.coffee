@@ -5,13 +5,15 @@ utils = require './utils'
 
 eventHandler = require('got-events')()
 
+LOG = "MMan >"
+
 module.exports = manager = (message, user, connection) ->
 
-  id = message.id + ''
+  id = "#{message.id}"
 
   payback = user: user, message: message, connection: connection
 
-  console.log message.type, message.id, message
+  console.log LOG, message.type, message.id, message
   switch message.type
     # PING? PONG!
     when 'ping'
@@ -21,7 +23,7 @@ module.exports = manager = (message, user, connection) ->
     # CONNECT
     when 'handshake'
       if not PapersPlease.handshake message
-        console.warn message.id, 'Handshake failed signature',
+        console.warn LOG, message.id, 'Handshake failed signature',
           message.type, message.data
         eventHandler.trigger 'handshake',
           new Error('Handshake failed signature'), payback
@@ -30,8 +32,6 @@ module.exports = manager = (message, user, connection) ->
       # Update user
       user.id = message.data.userId
       user.role = message.data.userRole
-      # Only if we don't know user sessions
-      user.sessions = user.sessions or message.data.sessions or []
       # Add user
       Database.users.add user
       # Add socket to user socket list
@@ -42,7 +42,7 @@ module.exports = manager = (message, user, connection) ->
     # JOIN
     when 'session'
       if not PapersPlease.session message, user.id
-        console.warn message.id, 'Sessions outdated', message.type,
+        console.warn LOG, message.id, 'Sessions outdated', message.type,
           message.data
         eventHandler.trigger 'session', new Error('Session outdated'),
           user: user, message: message
@@ -55,27 +55,29 @@ module.exports = manager = (message, user, connection) ->
 
     # MESSAGE
     when 'message'
-      if not PapersPlease.message message, user.sessions
-        console.warn message.id, 'Forbidden session', message.type,
-          message.data
-        return connection.sendUTF utils.mkResponse 4010, id
-
       if message.data.message is '/status'
-        return console.log (((userId) ->
+        console.info LOG, "sessionUsers", Database.sessionUsers.getAll()
+        console.info LOG, "userSessions", Database.userSessions.getAll()
+        console.info LOG, "users", Database.users.getAll()
+        console.info LOG, (((userId) ->
           user = Database.users.get userId
 
           id: user.id
           role: user.role
-          sessions: user.sessions
 
           ) userId for userId in (Database.sessionUsers.get message.session))
+
+      if not PapersPlease.message message, Database.userSessions.get(user.id)
+        console.warn LOG, message.id, 'Forbidden session', message.type,
+          message.data
+        return connection.sendUTF utils.mkResponse 4010, id
 
       eventHandler.trigger 'message', null, payback
 
     # ATTACHMENT
     when 'attachment'
-      if not PapersPlease.message message, user.sessions
-        console.warn message.id, 'Forbidden session', message.type,
+      if not PapersPlease.message message, Database.userSessions.get(user.id)
+        console.warn LOG, message.id, 'Forbidden session', message.type,
           message.data
         eventHandler.trigger 'attachment',
           new Error('Forbidden session'), payback
