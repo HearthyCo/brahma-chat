@@ -41,6 +41,7 @@ module.exports = actions =
     # session users
     sockets = Database.sessionUsers.getSockets message.session
     states = Database.sessionUsers.getConnStates message.session
+    console.log 'States:', states
 
     # Avoid echo, exclude author connection
     excludeSockets = []

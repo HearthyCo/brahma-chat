@@ -57,6 +57,7 @@ module.exports = manager = (message, user, connection) ->
     when 'message'
       if message.data.message is '/status'
         console.info LOG, "user", user
+        console.info LOG, "sessions", Database.userSessions.get(user.id)
         console.info LOG, "sessionUsers", Database.sessionUsers.getAll()
         console.info LOG, "userSessions", Database.userSessions.getAll()
         console.info LOG, "users", Database.users.getAll()
