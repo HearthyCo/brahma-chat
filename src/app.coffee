@@ -87,9 +87,9 @@ amqp.on 'sessions.pools', 'broadcast', (err, data) ->
   console.log LOG, 'sessions.pools', data.serviceTypes
   Chat.notice
     id: null
-    type: 'pools'
+    type: 'update'
     status: 1000
-    data: serviceTypes: data.serviceTypes,
+    data: servicetypes: data.servicetypes,
     Database.userSockets.getProfessionals()
 
 amqp.on '*', (evt) ->
