@@ -13,7 +13,8 @@ module.exports = manager = (message, user, connection) ->
 
   payback = user: user, message: message, connection: connection
 
-  console.log LOG, message.type, message.id, message
+  console.log LOG, "@#{user?.id or '?'}", message.type, message.id
+
   switch message.type
     # PING? PONG!
     when 'ping'
@@ -23,8 +24,8 @@ module.exports = manager = (message, user, connection) ->
     # CONNECT
     when 'handshake'
       if not PapersPlease.handshake message
-        console.warn LOG, message.id, 'Handshake failed signature',
-          message.type, message.data
+        console.warn LOG, "@#{user?.id or '?'} Handshake failed signature",
+          message.type, message.id, message.data
         eventHandler.trigger 'handshake',
           new Error('Handshake failed signature'), payback
         return connection.sendUTF utils.mkResponse 4010, id
@@ -38,20 +39,6 @@ module.exports = manager = (message, user, connection) ->
       Database.userSockets.add user.id, connection
 
       eventHandler.trigger 'handshake', null, payback
-
-    # JOIN
-    when 'session'
-      if not PapersPlease.session message, user.id
-        console.warn LOG, message.id, 'Sessions outdated', message.type,
-          message.data
-        eventHandler.trigger 'session', new Error('Session outdated'),
-          user: user, message: message
-        return connection.sendUTF utils.mkResponse 4010, id
-
-      # Only if we don't know user sessions
-      user.sessions = user.sessions or message.data.sessions or []
-
-      eventHandler.trigger 'session', null, payback
 
     # MESSAGE
     when 'message'
@@ -70,8 +57,8 @@ module.exports = manager = (message, user, connection) ->
           ) userId for userId in (Database.sessionUsers.get message.session))
 
       if not PapersPlease.message message, Database.userSessions.get(user.id)
-        console.warn LOG, message.id, 'Forbidden session', message.type,
-          message.data
+        console.warn LOG, "@#{user?.id or '?'} Forbidden ##{message.session}",
+          message.type, message.id, message.data
         return connection.sendUTF utils.mkResponse 4010, id
 
       eventHandler.trigger 'message', null, payback
@@ -79,8 +66,8 @@ module.exports = manager = (message, user, connection) ->
     # ATTACHMENT
     when 'attachment'
       if not PapersPlease.message message, Database.userSessions.get(user.id)
-        console.warn LOG, message.id, 'Forbidden session', message.type,
-          message.data
+        console.warn LOG, "@#{user?.id or '?'} Forbidden ##{message.session}",
+          message.type, message.id, message.data
         eventHandler.trigger 'attachment',
           new Error('Forbidden session'), payback
         return connection.sendUTF utils.mkResponse 4010, id

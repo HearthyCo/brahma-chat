@@ -20,19 +20,12 @@ papersPlease =
     return false if not utils.checkRequiredFields object, requiredCommonFields
 
     switch object.type
-      when 'session'
-        requiredFields = [
-          'data.sessions',
-          'data._sessions_sign'
-        ]
       when 'handshake'
         requiredFields = [
           'data.userId',
           'data._userId_sign',
           'data.userRole',
-          'data._userRole_sign',
-          'data.sessions',
-          'data._sessions_sign' ]
+          'data._userRole_sign' ]
       when 'message'
         requiredFields = [ 'session', 'data.message' ]
       when 'attachment'
@@ -54,18 +47,6 @@ papersPlease =
 
     return true
 
-  session: (object, uid) ->
-    return false if not object.data or not uid
-    data = object.data
-
-    if not checkSignature JSON.stringify(data.sessions), data._sessions_sign
-      return false
-
-    sessionsTs = data._sessions_sign.substring 44
-    return false if not @checkSignatureValidity uid, 'sessions', sessionsTs
-
-    return true
-
   handshake: (object) ->
     return false if not object.data
     data = object.data
@@ -78,10 +59,8 @@ papersPlease =
     uid = data.userId
     userIdTs = data._userId_sign.substring 44
     userRoleTs = data._userRole_sign.substring 44
-    sessionsTs = data._sessions_sign.substring 44
     return false if not @checkSignatureValidity uid, 'userId', userIdTs
     return false if not @checkSignatureValidity uid, 'userRole', userRoleTs
-    return false if not @checkSignatureValidity uid, 'sessions', sessionsTs
 
     return true
 

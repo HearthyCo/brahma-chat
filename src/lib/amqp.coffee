@@ -92,7 +92,6 @@ module.exports = amqp =
     catch ex
       console.error LOG, "onReceive. JSON.parse:", ex
 
-    console.log LOG, "onReceive. JSON.parse:", ex
     eventHandler.trigger.call amqp, key, null, data
 
   onProcessed: (err) ->

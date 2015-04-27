@@ -1,4 +1,3 @@
-Config = require './config'
 redis = require 'redis'
 Database = require './database'
 PapersPlease = require './papersPlease'
@@ -41,15 +40,14 @@ module.exports = actions =
     # session users
     sockets = Database.sessionUsers.getSockets message.session
     states = Database.sessionUsers.getConnStates message.session
-    console.log 'States:', states
 
     # Avoid echo, exclude author connection
     excludeSockets = []
     if not echo
       excludeSockets = Database.userSockets.get message.author
 
-    console.log LOG, message.type, message.id
     message.timestamp = Date.now()
+    console.log LOG, "Broadcast #{message.type} #{message.id}", states
 
     # Add to Redis
     redisClient.rpush ("session_#{message.session}"), JSON.stringify message
@@ -67,8 +65,8 @@ module.exports = actions =
   notice: (message, sockets) ->
     console.error LOG, "Error: Connect first" if not redisClient
 
-    console.log LOG, message.type, message.id
     message.timestamp = Date.now()
+    console.log LOG, "Notice #{message.type} #{message.id}"
 
     # Send it to the peers
     for socket in sockets
@@ -82,6 +80,8 @@ module.exports = actions =
 
     if 'object' isnt typeof userIds
       userIds = [userIds]
+
+    console.log LOG, "Kick ##{sessionId} @:", userIds
 
     ts = Date.now()
     for userId in userIds
@@ -98,6 +98,7 @@ module.exports = actions =
   # Closes a session
   destroy: (sessionId) ->
     console.error LOG, "Error: Connect first" if not redisClient
+    console.log LOG, "Destroy ##{sessionId}"
 
     userIds = Database.sessionUsers.get(sessionId)
     # Kick users
@@ -112,12 +113,13 @@ module.exports = actions =
   # Load user's sessions messages
   loadSessions: (user, messageId) ->
     console.error LOG, "Error: Connect first" if not redisClient
+    console.log LOG, "@#{user?.id or '?'} Loading sessions"
 
     multi = redisClient.multi()
     for userSession in Database.userSessions.get user.id
 
       if not Database.sessionUsers.has userSession, user.id
-        console.error LOG, "loadSessions: Inconsistent DB for #{user.id}!",
+        console.error LOG, "@#{user?.id or '?'} loadSessions inconsistent DB!",
           "sessionUsers:",
           Database.sessionUsers.get(userSession),
           "userSessions:",
@@ -134,16 +136,19 @@ module.exports = actions =
               try
                 messagesHistory.push JSON.parse messageResult
               catch ex
-                console.error LOG, 'Error parse:', messageResult
+                console.error LOG, "@#{user?.id or '?'} Error parse:",
+                  messageResult
 
         for conn in Database.userSockets.get user.id
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
             messages: messagesHistory
       else
-        console.error LOG, "Error loading user sessions", err
+        console.error LOG, "@#{user?.id or '?'} Error loading user sessions",
+          err
 
       eventHandler.trigger 'loadSessions', err,
         user: user, history: messagesHistory
+
 
 actions.on = eventHandler.on
 actions.off = eventHandler.off
