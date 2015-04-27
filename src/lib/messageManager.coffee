@@ -62,8 +62,8 @@ module.exports = manager = (message, user, connection) ->
         console.info LOG, (((userId) ->
           user = Database.users.get userId
 
-          id: user.id
-          role: user.role
+          id: userId
+          role: user?.role or "Offline"
 
           ) userId for userId in (Database.sessionUsers.get message.session))
 
