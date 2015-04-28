@@ -121,14 +121,12 @@ module.exports = actions =
     redisClient.lrange ["session_#{sessionId}", 0, -1], (err, results) ->
       messagesHistory = []
       if not err
-        for result in results
-          if result.length
-            for messageResult in result
-              try
-                messagesHistory.push JSON.parse messageResult
-              catch ex
-                console.error LOG, "@#{useId} Error parse:",
-                  messageResult
+        for messageResult in results
+          try
+            messagesHistory.push JSON.parse messageResult
+          catch ex
+            console.error LOG, "@#{userId} Error parse:",
+              messageResult
 
         for conn in Database.userSockets.get userId
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
@@ -138,7 +136,7 @@ module.exports = actions =
           "Error loading user sessions", err
 
       eventHandler.trigger 'loadSession', err,
-        user: user, history: messagesHistory
+        userId: userId, history: messagesHistory
 
   # Load user's sessions messages
   loadSessions: (user, messageId) ->

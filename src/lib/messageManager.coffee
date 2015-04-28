@@ -79,7 +79,7 @@ module.exports = manager = (umc) ->
         eventHandler.trigger 'attachment', null, umc
 
     else
-      console.error LOG, "@#{user?.id or '?'} ##{message.session}",
+      console.error LOG, "@#{user?.id or '?'} ##{message.session or '?'}",
         "Invalid type: #{message.type}",
         message.type, message.id, message.data
       When.resolve null

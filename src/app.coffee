@@ -48,7 +48,8 @@ MessageManager.on ['handshake'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
 
 MessageManager.on ['join'], 'loadSession', (err, data) ->
-  Chat.loadSession data.user.id, data.message.session, data.message.id if not err
+  Chat.loadSession data.user.id,
+    data.message.session, data.message.id if not err
 
 MessageManager.on '*', (evt) ->
   console.log LOG, "MessageManager event [#{evt}] triggered"
@@ -137,9 +138,9 @@ wsServer = new WebSocketServer(
 )
 
 wsServer.on 'request', (request) ->
-  PapersPlease.request request, (err) ->
-    if err
-      request.reject()
-      console.warn LOG, "request from #{request.origin}", err
-    else
-      Connect request, MessageManager
+  PapersPlease.request request
+  .then (request) ->
+    Connect request, MessageManager
+  .catch (err) ->
+    request.reject()
+    console.warn LOG, "request from #{request.origin}", err

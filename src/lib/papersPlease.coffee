@@ -18,18 +18,18 @@ checkSignatureValidity = (userId, kind, newTimestamp) ->
   true
 
 papersPlease =
-  request: (request, callback) ->
+  request: (request) -> new Promise (resolve) ->
     # return true if request.origin is 'http://localhost:3000'
     # return false
-    callback.call @, null, request
+    resolve request
 
-  auth: (umc) -> new Promise (resolve, reject) ->
+  auth: (umc) -> new Promise (resolve) ->
     if umc.message.type isnt 'handshake' and not umc.user?.id
       throw new Error 'Unauthorized before handshake'
 
     resolve umc
 
-  required: (umc) -> new Promise (resolve, reject) ->
+  required: (umc) -> new Promise (resolve) ->
     if not umc.message.data
       throw new Error 'No data'
 
@@ -75,7 +75,7 @@ papersPlease =
 
     resolve umc
 
-  handshake: (umc) -> new Promise (resolve, reject) ->
+  handshake: (umc) -> new Promise (resolve) ->
     if not umc.message.data
       throw new Error 'No data'
 
@@ -98,7 +98,7 @@ papersPlease =
 
     resolve umc
 
-  join: (umc) -> new Promise (resolve, reject) ->
+  join: (umc) -> new Promise (resolve) ->
     if not umc.message.data
       throw new Error 'No data'
 
@@ -109,7 +109,7 @@ papersPlease =
 
     resolve umc
 
-  message: (umc) -> new Promise (resolve, reject) ->
+  message: (umc) -> new Promise (resolve) ->
     if not umc.message.data
       throw new Error 'No data'
 
