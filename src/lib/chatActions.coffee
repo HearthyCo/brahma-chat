@@ -1,4 +1,5 @@
 redis = require 'redis'
+Config = require './config'
 Database = require './database'
 PapersPlease = require './papersPlease'
 utils = require './utils'
@@ -81,19 +82,21 @@ module.exports = actions =
     if 'object' isnt typeof userIds
       userIds = [userIds]
 
-    console.log LOG, "Kick ##{sessionId} @:", userIds
+    console.log LOG, "Kick ##{sessionId} -> @", userIds
 
     ts = Date.now()
     for userId in userIds
       # Bump signature validity so users can't re-join
       PapersPlease.checkSignatureValidity userId, 'sessions', ts
       # Send kick notification
-      for socket in Database.userSockets userId
+      for socket in Database.userSockets.get userId
         socket.sendUTF JSON.stringify
           id: null
           type: 'kick'
           status: 1000
           data: session: sessionId
+
+    eventHandler.trigger 'kick', null, sessionId: sessionId, userIds: userIds
 
   # Closes a session
   destroy: (sessionId) ->
@@ -109,6 +112,33 @@ module.exports = actions =
     Database.sessionUsers.destroy sessionId
     # Destroyed
     eventHandler.trigger 'destroy', null, {}
+
+  # Load user's sessions messages
+  loadSession: (userId, sessionId, messageId) ->
+    console.error LOG, "Error: Connect first" if not redisClient
+    console.log LOG, "@#{userId} ##{sessionId} Loading session"
+
+    redisClient.lrange ["session_#{sessionId}", 0, -1], (err, results) ->
+      messagesHistory = []
+      if not err
+        for result in results
+          if result.length
+            for messageResult in result
+              try
+                messagesHistory.push JSON.parse messageResult
+              catch ex
+                console.error LOG, "@#{useId} Error parse:",
+                  messageResult
+
+        for conn in Database.userSockets.get userId
+          conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
+            messages: messagesHistory
+      else
+        console.error LOG, "@#{userId} ##{sessionId}",
+          "Error loading user sessions", err
+
+      eventHandler.trigger 'loadSession', err,
+        user: user, history: messagesHistory
 
   # Load user's sessions messages
   loadSessions: (user, messageId) ->

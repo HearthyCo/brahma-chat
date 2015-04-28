@@ -83,6 +83,7 @@ module.exports = amqp =
     console.error LOG, "Connection closed. Retry #{amqp._reconnections}."
 
   onConnectionError: (err) ->
+    console.error LOG, "Connection error:", err
     amqp.onConnectFail err
 
   onReceive: (msg) ->

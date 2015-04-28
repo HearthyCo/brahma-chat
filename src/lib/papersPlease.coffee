@@ -1,25 +1,46 @@
 utils = require './utils'
 checkSignature = require './checkSignature'
+Database = require './database'
 _ = require 'underscore'
+
+# MWAHAHAHA!
+When = require 'when'
+Promise = When.promise
 
 # Security checks (⌐■_■)
 
 userMinTimestamps = {}
 
+checkSignatureValidity = (userId, kind, newTimestamp) ->
+  userMinTimestamps[userId] = {} if not userMinTimestamps[userId]
+  return false if userMinTimestamps[userId][kind]? > newTimestamp
+  userMinTimestamps[userId][kind] = newTimestamp
+  true
+
 papersPlease =
-  request: (request) ->
+  request: (request, callback) ->
     # return true if request.origin is 'http://localhost:3000'
     # return false
-    return true
+    callback.call @, null, request
 
-  required: (object, userId) ->
+  auth: (umc) -> new Promise (resolve, reject) ->
+    if umc.message.type isnt 'handshake' and not umc.user?.id
+      throw new Error 'Unauthorized before handshake'
+
+    resolve umc
+
+  required: (umc) -> new Promise (resolve, reject) ->
+    if not umc.message.data
+      throw new Error 'No data'
+
     # check required fields
     requiredCommonFields = [ 'id', 'type', 'data' ]
     requiredFields = []
 
-    return false if not utils.checkRequiredFields object, requiredCommonFields
+    if not utils.checkRequiredFields umc.message, requiredCommonFields
+      throw new Error 'Missing required common fields'
 
-    switch object.type
+    switch umc.message.type
       when 'handshake'
         requiredFields = [
           'data.userId',
@@ -28,6 +49,8 @@ papersPlease =
           'data._userRole_sign' ]
       when 'message'
         requiredFields = [ 'session', 'data.message' ]
+      when 'join'
+        requiredFields = [ 'session' ]
       when 'attachment'
         requiredFields = [
           'session',
@@ -39,44 +62,64 @@ papersPlease =
         requiredFields = [ 'data.message' ]
 
     requiredFields = _.union requiredCommonFields, requiredFields
-    return false if not utils.checkRequiredFields object, requiredFields
+    if not utils.checkRequiredFields umc.message, requiredFields
+      throw new Error 'Missing required type fields'
 
     # check if userid is equal to id
-    userId = object.data.userId if object.type is 'handshake' and not userId?
-    return false if "#{userId}" isnt object.id.split('.')[0]
+    userId = umc.user.id
+    if umc.message.type is 'handshake' and not umc.user.id?
+      userId = umc.message.data.userId
 
-    return true
+    if "#{userId}" isnt umc.message.id.split('.')[0]
+      throw new Error 'user.id incoherent with message.id'
 
-  handshake: (object) ->
-    return false if not object.data
-    data = object.data
+    resolve umc
 
-    return false if not checkSignature data.userId, data._userId_sign
+  handshake: (umc) -> new Promise (resolve, reject) ->
+    if not umc.message.data
+      throw new Error 'No data'
 
-    if not checkSignature JSON.stringify(data.sessions), data._sessions_sign
-      return false
+    data = umc.message.data
+
+    if not checkSignature data.userId, data._userId_sign
+      throw new Error 'No signature for userId'
+
+    if not checkSignature data.userRole, data._userRole_sign
+      throw new Error 'No signature for userRole'
 
     uid = data.userId
     userIdTs = data._userId_sign.substring 44
     userRoleTs = data._userRole_sign.substring 44
-    return false if not @checkSignatureValidity uid, 'userId', userIdTs
-    return false if not @checkSignatureValidity uid, 'userRole', userRoleTs
 
-    return true
+    if not checkSignatureValidity uid, 'userId', userIdTs
+      throw new Error 'Signature invalid for userId'
+    if not checkSignatureValidity uid, 'userRole', userRoleTs
+      throw new Error 'Signature invalid for userRole'
 
-  message: (object, sessions) ->
-    return false if not object.data
-    data = object.data
+    resolve umc
 
+  join: (umc) -> new Promise (resolve, reject) ->
+    if not umc.message.data
+      throw new Error 'No data'
+
+    sessions = Database.userSessions.get umc.user.id
     # check if session is in user sessions allowed
-    return false if (object.session not in sessions)
+    if umc.message.session not in sessions
+      throw new Error 'Forbidden session'
 
-    return true
+    resolve umc
 
-  checkSignatureValidity: (userId, kind, newTimestamp) ->
-    userMinTimestamps[userId] = {} if not userMinTimestamps[userId]
-    return false if userMinTimestamps[userId][kind]? > newTimestamp
-    userMinTimestamps[userId][kind] = newTimestamp
-    true
+  message: (umc) -> new Promise (resolve, reject) ->
+    if not umc.message.data
+      throw new Error 'No data'
+
+    sessions = Database.userSessions.get umc.user.id
+    # check if session is in user sessions allowed
+    if umc.message.session not in sessions
+      throw new Error 'Forbidden session'
+
+    resolve umc
+
+  checkSignatureValidity: checkSignatureValidity
 
 module.exports = exports = papersPlease

@@ -1,3 +1,5 @@
+# TODO: Convert sessionUsers and userSessions to Redis
+
 _ = require 'underscore'
 
 # Local Data

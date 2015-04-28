@@ -2,12 +2,16 @@
 
 require('better-console-log')()
 
+process.on "uncaughtException", (err) ->
+  console.error "uncaughtException", err.stack
+
 WebSocketServer = require('websocket').server
 http = require 'http'
 utils = require './lib/utils'
 
-PapersPlease = require './lib/papersPlease'
 Config = require './lib/config'
+Connect = require './lib/connect'
+PapersPlease = require './lib/papersPlease'
 Database = require './lib/database'
 
 LOG = "App  >"
@@ -40,8 +44,11 @@ Chat.on '*', (evt) ->
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
   Chat.broadcast data.message if not err
 
-MessageManager.on ['handshake', 'session'], 'loadSession', (err, data) ->
+MessageManager.on ['handshake'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
+
+MessageManager.on ['join'], 'loadSession', (err, data) ->
+  Chat.loadSession data.user.id, data.message.session, data.message.id if not err
 
 MessageManager.on '*', (evt) ->
   console.log LOG, "MessageManager event [#{evt}] triggered"
@@ -59,7 +66,7 @@ amqp.on 'chat.attachment', 'broadcast', (err, data) ->
 
 # Close received
 amqp.on 'session.close', 'destroy', (err, data) ->
-  console.log LOG, 'session.close', data.id
+  console.log LOG, 'session.close', data
   Chat.destroy data.id
 
 # Changed session's users list
@@ -75,10 +82,11 @@ amqp.on 'session.users', 'users', (err, data) ->
   # users can join
   for userId in userIds when userId not in oldIds
     Database.userSessions.add userId, sessionId
+    Chat.loadSession userId, sessionId, null if not err
 
   # users must leave (kick'em!)
   for userId in oldIds when userId not in userIds
-    Database.userSessions.remove userLeaves, sessionId
+    Database.userSessions.remove userId, sessionId
     Chat.kick sessionId, [userId]
 
 # Changed sessions' users list
@@ -129,71 +137,9 @@ wsServer = new WebSocketServer(
 )
 
 wsServer.on 'request', (request) ->
-  if not PapersPlease.request request
-    console.warn LOG, 'Connection from origin',
-      request.origin, 'rejected'
-    return request.reject()
-
-  connection = request.accept null, request.origin
-  index = Database.connections.add connection
-
-  # User data initialization
-  user =
-    id: null
-    role: 'client'
-
-  console.log LOG, "Connection #{connection.remoteAddress} accepted."
-
-  connection.on 'message', (messageString) ->
-    if messageString.type is 'utf8'
-      # JSON messageString
-      try
-        messages = JSON.parse messageString.utf8Data
-      catch ex
-        console.warn LOG, "@#{user?.id or '?'} JSON.parse:", ex
-        return connection.sendUTF utils.mkResponse 4000
-
-      if Object.prototype.toString.call(messages) isnt '[object Array]'
-        messages = [messages]
-
-      for message in messages
-
-        # Test if handshake is done
-        if not user.id and message.type isnt 'handshake' and
-        message.type isnt 'ping'
-          console.warn LOG, "@#{user?.id or '?'} Before handshake", message.type,
-            message.id, message.data
-          return connection.sendUTF utils.mkResponse 4010
-
-        # check if messageString is valid
-        # check required fields
-        if not PapersPlease.required message, user.id
-          console.warn LOG, "@#{user?.id or '?'} Missing fields",
-            message.type, message.id, message.data
-          return connection.sendUTF utils.mkResponse 4030, "#{message.id}"
-
-        # set author
-        message.author = user.id
-
-        # Send to MessageManager
-        MessageManager message, user, connection
-
+  PapersPlease.request request, (err) ->
+    if err
+      request.reject()
+      console.warn LOG, "request from #{request.origin}", err
     else
-      console.warn LOG, "@#{user?.id or '?'}", 'Unknown string type:',
-        messageString.type
-
-  connection.on 'close', (reasonCode, description) ->
-    # remove connection
-    Database.connections.remove index
-
-    if user.id
-      console.log LOG, "@#{user?.id or '?'} disconnected",
-        "(#{connection.remoteAddress})",
-        reasonCode, description
-
-      # remove user socket from list
-      Database.userSockets.remove user.id, connection
-
-      # Remove user if offline
-      if not Database.userSockets.get(user.id).length
-        Database.users.remove user.id
+      Connect request, MessageManager
