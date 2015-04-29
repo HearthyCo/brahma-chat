@@ -1,6 +1,6 @@
 {
   "name": "brahma-chat",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Chat server",
   "main": "src/app.coffee",
   "scripts": {
