@@ -33,22 +33,22 @@ module.exports = connect = (request, MessageManager) ->
 
       for message in messages
         umc = user: user, message: message, connection: connection
-
-        PapersPlease.auth umc
-        .then ->
-          PapersPlease.required umc
-        .then ->
-          # set author
-          umc.message.author = umc.user.id
-          # Send to MessageManager
-          MessageManager umc
-        .catch (err) ->
-          console.warn LOG, "@#{umc.user?.id or '?'}", err,
-            umc.message.type, umc.message.id, umc.message.data
-          if err is 'Unauthorized before handshake'
-            umc.connection.sendUTF utils.mkResponse 4010
-          else
-            umc.connection.sendUTF utils.mkResponse 4030
+        do (umc) ->
+          PapersPlease.auth umc
+          .then ->
+            PapersPlease.required umc
+          .then ->
+            # set author
+            umc.message.author = umc.user.id
+            # Send to MessageManager
+            MessageManager umc
+          .catch (err) ->
+            console.warn LOG, "@#{umc.user?.id or '?'}", err,
+              umc.message.type, umc.message.id, umc.message.data
+            if err is 'Unauthorized before handshake'
+              umc.connection.sendUTF utils.mkResponse 4010
+            else
+              umc.connection.sendUTF utils.mkResponse 4030
 
     else
       console.warn LOG, "@#{user?.id or '?'}", 'Unknown string type:',

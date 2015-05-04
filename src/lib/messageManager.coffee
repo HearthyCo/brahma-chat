@@ -18,8 +18,6 @@ module.exports = manager = (umc) ->
 
   id = "#{message.id}"
 
-  umc = user: user, message: message, connection: connection
-
   console.log LOG, "@#{user?.id or '?'}", message.type, message.id
 
   # Save Promise in `end`
