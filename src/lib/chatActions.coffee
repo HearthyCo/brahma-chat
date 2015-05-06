@@ -177,6 +177,18 @@ module.exports = actions =
       eventHandler.trigger 'loadSessions', err,
         user: user, history: messagesHistory
 
+  # Send online professionals count update
+  updateProfessionalCount: (conn) ->
+    sockets = if conn then [conn] else Database.userSockets.getClients()
+    miscEntry =
+      id: 'professionalsOnline'
+      count: Database.users.countProfessionals()
+    msg =
+      id: null
+      type: 'update'
+      status: 1000
+      data: misc: [miscEntry]
+    actions.notice msg, sockets
 
 actions.on = eventHandler.on
 actions.off = eventHandler.off

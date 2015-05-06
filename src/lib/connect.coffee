@@ -4,6 +4,7 @@ _when = require 'when'
 
 PapersPlease = require './papersPlease'
 Database = require './database'
+Chat = require './chatActions'
 
 LOG = "Conn >"
 
@@ -69,5 +70,9 @@ module.exports = connect = (request, MessageManager) ->
       # Remove user if offline
       if not Database.userSockets.get(user.id).length
         Database.users.remove user.id
+        # Also, notify clients if he was a professional
+        Chat.updateProfessionalCount() if user.role is 'professional'
+
+
 
   return connection

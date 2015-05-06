@@ -98,6 +98,12 @@ database = do ->
     userSessions: crud.call @, userSessions
 
   # ------- custom
+
+  # Get connected professionals count
+  iface.users.countProfessionals = ->
+    professionals = (id for id, info of users when info.role is 'professional')
+    professionals.length
+
   # Get sockets from sessionId
   iface.sessionUsers.getSockets = (id) ->
     online = iface.sessionUsers.getConnStates(id).online
@@ -122,6 +128,15 @@ database = do ->
     professionals = (id for id, info of users when info.role is 'professional')
     sockets = []
     for uid in professionals
+      for socket in userSockets[uid]
+        sockets.push socket
+    sockets
+
+  # Get client's userIds
+  iface.userSockets.getClients = ->
+    clients = (id for id, info of users when info.role is 'client')
+    sockets = []
+    for uid in clients
       for socket in userSockets[uid]
         sockets.push socket
     sockets

@@ -46,6 +46,10 @@ MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
 
 MessageManager.on ['handshake'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
+  if data.user.role is 'professional'
+    Chat.updateProfessionalCount()
+  else
+    Chat.updateProfessionalCount data.connection
 
 MessageManager.on ['join'], 'loadSession', (err, data) ->
   Chat.loadSession data.user.id,
@@ -79,6 +83,15 @@ amqp.on 'session.users', 'users', (err, data) ->
 
   # set session's users list
   Database.sessionUsers.set sessionId, userIds
+
+  # remaining users get notified of changes
+  msg =
+    id: null
+    type: 'reload'
+    status: 1000
+    data: target: 'session'
+  for userId in oldIds when userId in userIds
+    Chat.notice msg, Database.userSockets.get userId
 
   # users can join
   for userId in userIds when userId not in oldIds
