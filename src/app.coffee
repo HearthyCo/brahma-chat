@@ -89,7 +89,10 @@ amqp.on 'session.users', 'users', (err, data) ->
     id: null
     type: 'reload'
     status: 1000
-    data: target: 'session'
+    data:
+      type: 'session'
+      target: sessionId
+      participants: userIds
   for userId in oldIds when userId in userIds
     Chat.notice msg, Database.userSockets.get userId
 
