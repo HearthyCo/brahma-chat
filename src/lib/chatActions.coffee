@@ -34,8 +34,8 @@ module.exports = actions =
       eventHandler.trigger 'connect', err, {}
 
   # Broadcasts a message to every socket,
-  # except author
-  broadcast: (message, echo = false) ->
+  # except the specific ones passed on except
+  broadcast: (message, except) ->
     console.error LOG, "Error: Connect first" if not redisClient
 
     # session users
@@ -43,9 +43,7 @@ module.exports = actions =
     states = Database.sessionUsers.getConnStates message.session
 
     # Avoid echo, exclude author connection
-    excludeSockets = []
-    if not echo
-      excludeSockets = Database.userSockets.get message.author
+    excludeSockets = if except instanceof Array then except else [except]
 
     message.timestamp = Date.now()
     console.log LOG, "Broadcast #{message.type} #{message.id}", states

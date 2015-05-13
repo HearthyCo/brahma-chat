@@ -42,7 +42,7 @@ Chat.on '*', (evt) ->
 
 # MESSAGEMANAGER ---------
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
-  Chat.broadcast data.message if not err
+  Chat.broadcast data.message, data.connection if not err
 
 MessageManager.on ['handshake'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
