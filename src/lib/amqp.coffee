@@ -10,7 +10,7 @@ module.exports = amqp =
   exchange: 'amq.topic'
   keys: [
     'chat.attachment'
-    'session.close', 'session.users'
+    'session.close', 'session.finish', 'session.users'
     'sessions.users', 'sessions.pools'
   ]
 

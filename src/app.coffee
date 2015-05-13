@@ -74,6 +74,19 @@ amqp.on 'session.close', 'destroy', (err, data) ->
   console.log LOG, 'session.close', data
   Chat.destroy data.id
 
+# Finish received
+amqp.on 'session.finish', 'destroy2', (err, data) ->
+  console.log LOG, 'session.finish', data
+  msg =
+    id: null
+    type: 'reload'
+    status: 1000
+    data:
+      type: 'session'
+      target: data.sessionId
+  for userId in data.clients
+    Chat.notice msg, Database.userSockets.get userId
+
 # Changed session's users list
 amqp.on 'session.users', 'users', (err, data) ->
   sessionId = data.id
