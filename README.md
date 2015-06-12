@@ -1,6 +1,9 @@
 # Brahma Chat
 
+## Dokku setup
 BUILDPACK_URL=https://github.com/mbuchetics/heroku-buildpack-nodejs-grunt.git
+
+Copy the `nginx.conf.d` directory (found at `doc/`) into the `/home/dokku/[deploy_app_name]` directory on the dokku server. It's needed to listen to the 443 port to avoid http cache proxies.
 
 ## Websockets
 Refer to [socket.io](http://socket.io/) for technical stuff.
