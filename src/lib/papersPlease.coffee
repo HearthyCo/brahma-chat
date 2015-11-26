@@ -3,6 +3,8 @@ checkSignature = require './checkSignature'
 Database = require './database'
 _ = require 'underscore'
 
+Config = require './config'
+
 # MWAHAHAHA!
 When = require 'when'
 Promise = When.promise
@@ -102,10 +104,11 @@ papersPlease =
     if not umc.message.data
       throw new Error 'No data'
 
-    sessions = Database.userSessions.get umc.user.id
-    # check if session is in user sessions allowed
-    if umc.message.session not in sessions
-      throw new Error 'Forbidden session'
+    if Config.options.requireSessionAccess
+      sessions = Database.userSessions.get umc.user.id
+      # check if session is in user sessions allowed
+      if umc.message.session not in sessions
+        throw new Error 'Forbidden session'
 
     resolve umc
 
@@ -113,10 +116,11 @@ papersPlease =
     if not umc.message.data
       throw new Error 'No data'
 
-    sessions = Database.userSessions.get umc.user.id
-    # check if session is in user sessions allowed
-    if umc.message.session not in sessions
-      throw new Error 'Forbidden session'
+    if Config.options.requireSessionAccess
+      sessions = Database.userSessions.get umc.user.id
+      # check if session is in user sessions allowed
+      if umc.message.session not in sessions
+        throw new Error 'Forbidden session'
 
     resolve umc
 

@@ -42,14 +42,21 @@ Chat.on '*', (evt) ->
 
 # MESSAGEMANAGER ---------
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
-  Chat.broadcast data.message, data.connection if not err
+  if Config.options.allowEcho
+    Chat.broadcast data.message if not err
+  else
+    Chat.broadcast data.message, data.connection if not err
 
 MessageManager.on ['handshake'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
   if data.user.role is 'professional'
-    Chat.updateProfessionalCount()
+    Chat.updateProfessionalList(
+      null, Config.options.allowProfessionalList or false
+    )
   else
-    Chat.updateProfessionalCount data.connection
+    Chat.updateProfessionalList(
+      data.connection, Config.options.allowProfessionalList or false
+    )
 
 MessageManager.on ['join'], 'loadSession', (err, data) ->
   Chat.loadSession data.user.id,

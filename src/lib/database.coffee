@@ -101,8 +101,11 @@ database = do ->
 
   # Get connected professionals count
   iface.users.countProfessionals = ->
-    professionals = (id for id, info of users when info.role is 'professional')
-    professionals.length
+    iface.users.getProfessionals()?.length
+
+  # Get connected professionals list
+  iface.users.getProfessionals = ->
+    (id for id, info of users when info.role is 'professional')
 
   # Get sockets from sessionId
   iface.sessionUsers.getSockets = (id) ->

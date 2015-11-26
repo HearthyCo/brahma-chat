@@ -177,10 +177,16 @@ module.exports = actions =
 
   # Send online professionals count update
   updateProfessionalCount: (conn) ->
+    actions.updateProfessionalList(conn, false)
+
+  # Send online professionals list update
+  updateProfessionalList: (conn, includeList = false) ->
     sockets = if conn then [conn] else Database.userSockets.getClients()
+    professionals = Database.users.getProfessionals()
     miscEntry =
       id: 'professionalsOnline'
-      count: Database.users.countProfessionals()
+      count: professionals.length
+    miscEntry.list = professionals if includeList
     msg =
       id: null
       type: 'update'

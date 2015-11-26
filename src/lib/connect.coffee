@@ -2,6 +2,7 @@ http = require 'http'
 utils = require './utils'
 _when = require 'when'
 
+Config = require './config'
 PapersPlease = require './papersPlease'
 Database = require './database'
 Chat = require './chatActions'
@@ -71,8 +72,9 @@ module.exports = connect = (request, MessageManager) ->
       if not Database.userSockets.get(user.id).length
         Database.users.remove user.id
         # Also, notify clients if he was a professional
-        Chat.updateProfessionalCount() if user.role is 'professional'
-
-
+        if user.role is 'professional'
+          Chat.updateProfessionalList(
+            null, Config.options.allowProfessionalList or false
+          )
 
   return connection
