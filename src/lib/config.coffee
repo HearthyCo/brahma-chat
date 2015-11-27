@@ -4,7 +4,6 @@ URL = require 'url'
 options =
   allowEcho: true
   allowProfessionalList: true
-  requireSessionAccess: false
 
 # REDIS
 redis_env = process.env.REDIS_PORT or 'tcp://localhost:6379'

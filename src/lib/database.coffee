@@ -64,7 +64,6 @@ database = do ->
   users = {}
   # user.id: [sockets]
   userSockets = {}
-
   # session.id: [allowed users.ids]
   sessionUsers = {}
   # user.id: [allowed sessions.ids]

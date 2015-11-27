@@ -42,7 +42,7 @@ module.exports = actions =
     sockets = Database.sessionUsers.getSockets message.session
     states = Database.sessionUsers.getConnStates message.session
 
-    # Avoid echo, exclude author connection
+    # Exclude this sockets, used by echo
     excludeSockets = if except instanceof Array then except else [except]
 
     message.timestamp = Date.now()

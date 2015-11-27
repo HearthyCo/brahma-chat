@@ -113,12 +113,14 @@ amqp.on 'session.users', 'users', (err, data) ->
       type: 'session'
       target: sessionId
       participants: userIds
+
   for userId in oldIds when userId in userIds
     Chat.notice msg, Database.userSockets.get userId
 
-  # users can join
+  # users could join
   for userId in userIds when userId not in oldIds
     Database.userSessions.add userId, sessionId
+    # Automatically send history
     Chat.loadSession userId, sessionId, null if not err
 
   # users must leave (kick'em!)
