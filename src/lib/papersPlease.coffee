@@ -30,7 +30,9 @@ papersPlease =
     else if request.origin not in ['http://localhost:3000']
       reject 'Invalid Origin'
     else
-      resolve request, session
+      resolve
+        request: request
+        session: session
 
   #
   #      db    88   88 888888 88  88

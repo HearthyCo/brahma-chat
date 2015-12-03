@@ -13,7 +13,7 @@ module.exports = connect = (request, session, MessageManager) ->
   connection = request.accept null, request.origin
   index = Database.connections.add connection
 
-  user = session
+  user =
     id: session.id
     role: session.role
 

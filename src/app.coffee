@@ -177,8 +177,9 @@ wsServer = new WebSocketServer(
 
 wsServer.on 'request', (request) ->
   PapersPlease.request request
-  .then (request, session) ->
+  .then (response) ->
+    {request, session} = response
     Connect request, session, MessageManager
   .catch (err) ->
-    request.reject()
     console.warn LOG, "request from #{request.origin}", err
+    request.reject()

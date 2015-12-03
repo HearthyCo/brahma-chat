@@ -28,5 +28,6 @@ config =
   colors:
     client: [ 'blue', 'purple', 'plum', 'orange' ]
     professional: [ 'red', 'green', 'magenta' ]
+  options: options
 
 module.exports = exports = config
