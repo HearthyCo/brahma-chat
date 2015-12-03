@@ -41,19 +41,6 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 }
 ```
 ### Request
-#### Handshake
-```
-{
-	"id": String,
-	"type": "handshake",
-	"data": {
-		"userId": String,
-		"_userId_sign": String,
-		"sessions": Array,
-		"_sessions_sign": String
-	}
-}
-```
 #### Message
 ```
 {
@@ -115,17 +102,6 @@ Refer to [socket.io](http://socket.io/) for technical stuff.
 }
 ```
 ### Response
-#### Handshake
-```
-{
-	"id": String,
-	"type": "granted",
-	"status": Integer,
-	"data": {
-		"messages": Array
-	}
-}
-```
 #### Status, Error
 ```
 {

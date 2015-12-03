@@ -13,7 +13,6 @@ Config = require './lib/config'
 Connect = require './lib/connect'
 PapersPlease = require './lib/papersPlease'
 Database = require './lib/database'
-SessionReader = require './lib/sessionReader'
 
 LOG = "App  >"
 
@@ -48,7 +47,7 @@ MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
   else
     Chat.broadcast data.message, data.connection if not err
 
-MessageManager.on ['handshake'], 'loadSessions', (err, data) ->
+MessageManager.on ['connect'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
   if data.user.role is 'professional'
     Chat.updateProfessionalList(
@@ -177,18 +176,9 @@ wsServer = new WebSocketServer(
 )
 
 wsServer.on 'request', (request) ->
-  # origin = request.origin
-  # cookies = request.cookies
-  # TODO: Check origin against allowed values list!
-  session = request.cookies.filter((i) -> i.name is 'PLAY_SESSION')[0]?.value
-  session = SessionReader session
-  if not session.id?
+  PapersPlease.request request
+  .then (request, session) ->
+    Connect request, session, MessageManager
+  .catch (err) ->
     request.reject()
-  else
-    # TODO: Is PapersPlease needed anymore?
-    PapersPlease.request request
-    .then (request) ->
-      Connect request, MessageManager
-    .catch (err) ->
-      request.reject()
-      console.warn LOG, "request from #{request.origin}", err
+    console.warn LOG, "request from #{request.origin}", err

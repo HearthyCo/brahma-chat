@@ -30,8 +30,8 @@ module.exports = manager = (umc) ->
         eventHandler.trigger 'ping', null, umc
 
     # CONNECT
-    when 'handshake'
-      PapersPlease.handshake umc
+    when 'connect'
+      PapersPlease.connect umc
       .then ->
         # Update user
         user.id = message.data.userId
@@ -40,7 +40,7 @@ module.exports = manager = (umc) ->
         Database.users.add user
         # Add socket to user socket list
         Database.userSockets.add user.id, connection
-        eventHandler.trigger 'handshake', null, umc
+        eventHandler.trigger 'connect', null, umc
 
     # JOIN
     when 'join'

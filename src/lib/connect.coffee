@@ -9,14 +9,13 @@ Chat = require './chatActions'
 
 LOG = "Conn >"
 
-module.exports = connect = (request, MessageManager) ->
+module.exports = connect = (request, session, MessageManager) ->
   connection = request.accept null, request.origin
   index = Database.connections.add connection
 
-  # User data initialization
-  user =
-    id: null
-    role: 'client'
+  user = session
+    id: session.id
+    role: session.role
 
   console.log LOG, "Connection #{connection.remoteAddress} accepted."
 
@@ -47,10 +46,7 @@ module.exports = connect = (request, MessageManager) ->
           .catch (err) ->
             console.warn LOG, "@#{umc.user?.id or '?'}", err,
               umc.message.type, umc.message.id, umc.message.data
-            if err is 'Unauthorized before handshake'
-              umc.connection.sendUTF utils.mkResponse 4010
-            else
-              umc.connection.sendUTF utils.mkResponse 4030
+            umc.connection.sendUTF utils.mkResponse 4000
 
     else
       console.warn LOG, "@#{user?.id or '?'}", 'Unknown string type:',
