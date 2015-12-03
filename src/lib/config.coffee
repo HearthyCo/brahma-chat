@@ -24,7 +24,7 @@ config =
     port: redis.port
   amqp:
     url: URL.format amqp
-  secret: "7WMh?srdpHHKCKE]^=CrNTS:VIvtS4<r`:^aFp^bLMdCviInZd_Vtjv?XSITK?Jr"
+  secret: 'will grandfather hurt spider'
   colors:
     client: [ 'blue', 'purple', 'plum', 'orange' ]
     professional: [ 'red', 'green', 'magenta' ]

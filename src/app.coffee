@@ -13,6 +13,7 @@ Config = require './lib/config'
 Connect = require './lib/connect'
 PapersPlease = require './lib/papersPlease'
 Database = require './lib/database'
+SessionReader = require './lib/sessionReader'
 
 LOG = "App  >"
 
@@ -176,9 +177,18 @@ wsServer = new WebSocketServer(
 )
 
 wsServer.on 'request', (request) ->
-  PapersPlease.request request
-  .then (request) ->
-    Connect request, MessageManager
-  .catch (err) ->
+  # origin = request.origin
+  # cookies = request.cookies
+  # TODO: Check origin against allowed values list!
+  session = request.cookies.filter((i) -> i.name is 'PLAY_SESSION')[0]?.value
+  session = SessionReader session
+  if not session.id?
     request.reject()
-    console.warn LOG, "request from #{request.origin}", err
+  else
+    # TODO: Is PapersPlease needed anymore?
+    PapersPlease.request request
+    .then (request) ->
+      Connect request, MessageManager
+    .catch (err) ->
+      request.reject()
+      console.warn LOG, "request from #{request.origin}", err
