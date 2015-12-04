@@ -30,6 +30,7 @@ papersPlease =
     else if request.origin not in ['http://localhost:3000']
       reject 'Invalid Origin'
     else
+      session.id = parseInt session.id
       resolve
         request: request
         session: session
