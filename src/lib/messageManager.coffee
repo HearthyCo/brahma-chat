@@ -34,8 +34,8 @@ module.exports = manager = (umc) ->
       PapersPlease.connect umc
       .then ->
         # Update user
-        user.id = message.data.userId
-        user.role = message.data.userRole
+        user.id = umc.user.id
+        user.role = umc.user.role
         # Add user
         Database.users.add user
         # Add socket to user socket list

@@ -18,6 +18,9 @@ module.exports = connect = (request, session, MessageManager) ->
     role: session.role
 
   console.log LOG, "Connection #{connection.remoteAddress} accepted."
+  # Send fake message with type connect
+  umc = user: user, connection: connection, message: type: 'connect'
+  MessageManager umc
 
   connection.on 'message', (messageString) ->
     # check if messageString is valid
