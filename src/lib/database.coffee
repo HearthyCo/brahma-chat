@@ -19,7 +19,7 @@ crud = (dbObj) ->
   load: (dump) ->
     dbObj = dump or {}
   # collection
-  getIds: -> Object.keys(dbObj).map (id) -> parseInt id
+  getIds: -> Object.keys(dbObj) #.map (id) -> parseInt id
   getAll: -> dbObj
   get: (id = @id) -> dbObj[id] or []
   set: (id, content) ->
@@ -150,7 +150,7 @@ database = do ->
     for sessionId, usersAllowed of _sessionUsers
       for userId in usersAllowed
         cache[userId] = [] if not cache[userId]
-        cache[userId].push parseInt(sessionId)
+        cache[userId].push sessionId # parseInt(sessionId)
 
     iface.userSessions.load cache
 

@@ -131,7 +131,7 @@ amqp.on 'session.users', 'users', (err, data) ->
 # Changed sessions' users list
 amqp.on 'sessions.users', 'users', (err, data) ->
   _old = Database.sessionUsers.getIds()
-  _new = Object.keys(data.sessions).map (id) -> parseInt id
+  _new = Object.keys(data.sessions) #.map (id) -> parseInt id
 
   # save new
   Database.sessionUsers.load data.sessions
