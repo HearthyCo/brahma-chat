@@ -27,7 +27,7 @@ papersPlease =
     if not session.id? or not session.role?
       reject 'No user id nor role'
     # Check origin against allowed values list
-    else if request.origin not in ['http://localhost:3000']
+    else if request.origin not in ['http://localhost:3000', 'file://']
       reject 'Invalid Origin'
     else
       session.id = parseInt session.id
