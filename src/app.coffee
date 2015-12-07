@@ -73,8 +73,7 @@ amqp.on 'connect', 'requestSessions', ->
 
 # Attachment received
 amqp.on 'chat.attachment', 'broadcast', (err, data) ->
-  for message in data
-    Chat.broadcast message
+  Chat.broadcast data
 
 # Close received
 amqp.on 'session.close', 'destroy', (err, data) ->
