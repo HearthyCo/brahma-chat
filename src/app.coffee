@@ -158,7 +158,11 @@ amqp.on '*', (evt) ->
 
 server = http.createServer (request, response) ->
   console.log LOG, "Received request for #{request.url}"
-  response.writeHead 404
+  if request.url is '/ping'
+    response.writeHead 200
+    response.write 'pong'
+  else
+    response.writeHead 404
   response.end()
 
 server.listen Config.ws.port, ->
