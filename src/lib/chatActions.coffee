@@ -128,7 +128,7 @@ module.exports = actions =
 
         for conn in Database.userSockets.get userId
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
-            messages: messagesHistory
+            message: messagesHistory
       else
         console.error LOG, "@#{userId} ##{sessionId}",
           "Error loading user sessions", err
@@ -167,7 +167,7 @@ module.exports = actions =
 
         for conn in Database.userSockets.get user.id
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
-            messages: messagesHistory
+            message: messagesHistory
       else
         console.error LOG, "@#{user?.id or '?'} Error loading user sessions",
           err
