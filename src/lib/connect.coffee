@@ -42,6 +42,9 @@ module.exports = connect = (request, session, MessageManager) ->
           .then ->
             PapersPlease.required umc
           .then ->
+            # Remove unreceived
+            # Sent from clients to ensure reception
+            delete umc.message.unreceived if umc.message.unreceived
             # set author
             umc.message.author = umc.user.id
             # Send to MessageManager
