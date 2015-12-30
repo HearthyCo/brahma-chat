@@ -24,10 +24,16 @@ papersPlease =
     # cookies = request.cookies
     session = request.cookies.filter((i) -> i.name is 'PLAY_SESSION')[0]?.value
     session = SessionReader session
+    allowed = [
+      'http://localhost:3000'
+      'http://localhost:3002'
+      'http://mp-doctor.byglue.me'
+      'file://'
+    ]
     if not session.id? or not session.role?
       reject 'No user id nor role'
     # Check origin against allowed values list
-    else if request.origin not in ['http://localhost:3000', 'file://']
+    else if request.origin not in allowed
       reject 'Invalid Origin'
     else
       session.id = parseInt session.id
