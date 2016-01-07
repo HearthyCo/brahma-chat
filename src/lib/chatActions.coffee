@@ -3,6 +3,7 @@ Config = require './config'
 Database = require './database'
 PapersPlease = require './papersPlease'
 utils = require './utils'
+_ = require 'underscore'
 
 eventHandler = require('got-events')()
 
@@ -142,6 +143,7 @@ module.exports = actions =
     console.log LOG, "@#{user?.id or '?'} Loading sessions"
 
     multi = redisClient.multi()
+    queries = []
     for userSession in Database.userSessions.get user.id
 
       if not Database.sessionUsers.has userSession, user.id
@@ -152,11 +154,16 @@ module.exports = actions =
           Database.userSessions.get(user.id)
       else
         multi.lrange ("session_#{userSession}"), 0, -1
+        multi.get ("userStatus_#{user.id}_#{userSession}")
+        queries.push userSession
 
     multi.exec (err, results) ->
       messagesHistory = []
+      statusList = []
       if not err
-        for result in results
+        logs  = (v for v in results by 2)
+        status = (v for v in results[1..] by 2)
+        for result in logs
           if result.length
             for messageResult in result
               try
@@ -164,10 +171,17 @@ module.exports = actions =
               catch ex
                 console.error LOG, "@#{user?.id or '?'} Error parse:",
                   messageResult
-
+        for result, i in status
+          if result
+            sessionId = queries[i/2]
+            entity = _.extend {}, JSON.parse(result),
+              id: sessionId
+              chatId: sessionId
+            statusList.push entity
         for conn in Database.userSockets.get user.id
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
             message: messagesHistory
+            chatStatus: statusList
       else
         console.error LOG, "@#{user?.id or '?'} Error loading user sessions",
           err
@@ -193,6 +207,25 @@ module.exports = actions =
       status: 1000
       data: misc: [miscEntry]
     actions.notice msg, sockets
+
+  # Update user-session status
+  updateUserSessionStatus: (userId, sessionId, status) ->
+    # Update on Redis
+    redisClient.set ("userStatus_#{userId}_#{sessionId}"), JSON.stringify status
+
+    # Send it to all sockets of this user
+    entity = _.extend {}, status,
+      id: sessionId
+      chatId: sessionId
+    message =
+      id: null
+      type: 'status'
+      status: 2000
+      data:
+        chatStatus: [entity]
+    sockets = Database.userSockets.get userId
+    for socket in sockets
+      socket.sendUTF JSON.stringify message
 
 actions.on = eventHandler.on
 actions.off = eventHandler.off

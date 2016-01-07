@@ -88,6 +88,8 @@ papersPlease =
           'data.href',
           'data.type',
           'data.size' ]
+      when 'status'
+        requiredFields = [ 'session', 'data' ]
       when 'ping'
         requiredFields = [ 'data.message' ]
 
@@ -98,8 +100,9 @@ papersPlease =
     # check if userid is equal to id
     userId = umc.user.id
 
-    if "#{userId}" isnt umc.message.id.split('.')[0]
-      throw new Error 'user.id incoherent with message.id'
+    if umc.message.type is 'message'
+      if "#{userId}" isnt umc.message.id.split('.')[0]
+        throw new Error 'user.id incoherent with message.id'
 
     resolve umc
 

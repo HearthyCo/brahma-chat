@@ -76,6 +76,12 @@ module.exports = manager = (umc) ->
       .then ->
         eventHandler.trigger 'attachment', null, umc
 
+    # STATUS UPDATE
+    when 'status'
+      PapersPlease.message umc
+      .then ->
+        eventHandler.trigger 'status', null, umc
+
     else
       console.error LOG, "@#{user?.id or '?'} ##{message.session or '?'}",
         "Invalid type: #{message.type}",

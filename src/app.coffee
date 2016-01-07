@@ -47,6 +47,10 @@ MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
   else
     Chat.broadcast data.message, data.connection if not err
 
+MessageManager.on ['status'], 'statusUpdate', (err, data) ->
+  msg = data.message
+  Chat.updateUserSessionStatus data.user.id, msg.session, msg.data
+
 MessageManager.on ['connect'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
   if data.user.role is 'professional'
