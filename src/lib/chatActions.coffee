@@ -173,7 +173,7 @@ module.exports = actions =
                   messageResult
         for result, i in status
           if result
-            sessionId = queries[i/2]
+            sessionId = queries[i]
             entity = _.extend {}, JSON.parse(result),
               id: sessionId
               chatId: sessionId
