@@ -16,7 +16,7 @@ LOG = "Chat >"
 redisClient = null
 redisConnect = (cfg, callback) ->
   callback = callback or (err) ->
-    console.error LOG, 'Redis error', err if err
+    console.error LOG, 'Redis error', (err.stack or err) if err
 
   ###coffeelint-variable-scope-ignore###
   redisClient = redis.createClient cfg.port, cfg.host, {}
@@ -28,7 +28,7 @@ module.exports = actions =
     # Open Redis connection
     redisConnect _Config.redis, (err) ->
       if err
-        console.error LOG, 'Redis error', err
+        console.error LOG, 'Redis error', (err?.stack or err)
       else
         console.info LOG, 'Redis connected'
 
@@ -125,14 +125,14 @@ module.exports = actions =
             messagesHistory.push JSON.parse messageResult
           catch ex
             console.error LOG, "@#{userId} Error parse:",
-              messageResult
+              messageResult, (ex?.stack or ex)
 
         for conn in Database.userSockets.get userId
           conn.sendUTF utils.mkResponse 2000, messageId, 'joined', null,
             message: messagesHistory
       else
         console.error LOG, "@#{userId} ##{sessionId}",
-          "Error loading user sessions", err
+          "Error loading user sessions", (err?.stack or err)
 
       eventHandler.trigger 'loadSession', err,
         userId: userId, history: messagesHistory

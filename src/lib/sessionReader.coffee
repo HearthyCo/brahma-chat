@@ -3,6 +3,8 @@ _ = require 'underscore'
 
 config = require './config'
 
+LOG = "Read >"
+
 module.exports = exports = (cookie) ->
   if cookie
     # b5ed65f56a49b34f28633f1882d6f7103bfcf83c-id=2
@@ -15,11 +17,11 @@ module.exports = exports = (cookie) ->
       .digest('hex')
 
     if hash isnt myHash
-      console.warn 'Rejected bad session:', cookie
+      console.warn LOG, 'Rejected bad session:', cookie
       return {}
 
     _.object _.compact _.map message.split('&'), (item) ->
       if item then item.split '='
   else
-    console.warn 'Rejected no-cookie session'
+    console.warn LOG, 'Rejected no-cookie session'
     return {}

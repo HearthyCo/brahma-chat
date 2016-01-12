@@ -6,6 +6,7 @@ Config = require './config'
 PapersPlease = require './papersPlease'
 Database = require './database'
 Chat = require './chatActions'
+Tracking = require './tracking'
 
 LOG = "Conn >"
 
@@ -18,9 +19,16 @@ module.exports = connect = (request, session, MessageManager) ->
     role: session.role
 
   console.log LOG, "Connection #{connection.remoteAddress} accepted."
+
   # Send fake message with type connect
-  umc = user: user, connection: connection, message: type: 'connect'
-  MessageManager umc
+  _umc = user: user, connection: connection, message: type: 'connect'
+  MessageManager _umc
+
+  # Tracking
+  try
+    Tracking.trackConnection user, 1
+  catch ex
+    console.error LOG, "Tracking connect exception:", (ex?.stack or ex)
 
   connection.on 'message', (messageString) ->
     # check if messageString is valid
@@ -72,11 +80,18 @@ module.exports = connect = (request, session, MessageManager) ->
 
       # Remove user if offline
       if not Database.userSockets.get(user.id).length
+        # Remove user
         Database.users.remove user.id
         # Also, notify clients if he was a professional
         if user.role is 'professional'
           Chat.updateProfessionalList(
             null, Config.options.allowProfessionalList or false
           )
+
+      # Tracking
+      try
+        Tracking.trackConnection user, -1
+      catch ex
+        console.error LOG, "Tracking close exception:", (ex?.stack or ex)
 
   return connection

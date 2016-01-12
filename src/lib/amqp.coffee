@@ -71,7 +71,8 @@ module.exports = amqp =
   #--- Internal events
   onConnectFail: (err) ->
     amqp.reconnect()
-    console.error LOG, "Retry #{amqp._reconnections} after:", err
+    console.error LOG, "Retry #{amqp._reconnections} after:",
+      (err.stack or err)
     eventHandler.trigger.call amqp, 'connectFail', null, amqp
 
   onReturn: (err) ->
@@ -83,7 +84,7 @@ module.exports = amqp =
     console.error LOG, "Connection closed. Retry #{amqp._reconnections}."
 
   onConnectionError: (err) ->
-    console.error LOG, "Connection error:", err
+    console.error LOG, "Connection error:", (err.stack or err)
     amqp.onConnectFail err
 
   onReceive: (msg) ->
@@ -91,7 +92,7 @@ module.exports = amqp =
     try
       data = JSON.parse msg.content.toString()
     catch ex
-      console.error LOG, "onReceive. JSON.parse:", ex
+      console.error LOG, "onReceive. JSON.parse:", (ex?.stack or ex)
 
     eventHandler.trigger.call amqp, key, null, data
 

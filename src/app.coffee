@@ -3,7 +3,7 @@
 require('better-console-log')()
 
 process.on "uncaughtException", (err) ->
-  console.error "uncaughtException", err.stack
+  console.error "uncaughtException", (err.stack or err)
 
 WebSocketServer = require('websocket').server
 http = require 'http'
@@ -13,6 +13,7 @@ Config = require './lib/config'
 Connect = require './lib/connect'
 PapersPlease = require './lib/papersPlease'
 Database = require './lib/database'
+Tracking = require './lib/tracking'
 
 LOG = "App  >"
 
@@ -42,10 +43,19 @@ Chat.on '*', (evt) ->
 
 # MESSAGEMANAGER ---------
 MessageManager.on ['attachment', 'message'], 'broadcast', (err, data) ->
+  # Broadcast
   if Config.options.allowEcho
     Chat.broadcast data.message if not err
   else
     Chat.broadcast data.message, data.connection if not err
+
+  try
+    # Tracking
+    Tracking.trackMessage data
+    # TODO TRACKING: time since last interaction from another role
+  catch ex
+    console.error LOG, "Tracking message exception:", (ex?.stack or ex)
+
 
 MessageManager.on ['status'], 'statusUpdate', (err, data) ->
   msg = data.message
@@ -188,5 +198,7 @@ wsServer.on 'request', (request) ->
     {request, session} = response
     Connect request, session, MessageManager
   .catch (err) ->
-    console.warn LOG, "request from #{request.origin}", err
-    request.reject()
+    console.warn LOG, "Failed connect request from #{request.origin}", err
+    try
+      request.reject()
+    catch ex

@@ -31,9 +31,15 @@ papersPlease =
       'file://'
     ]
     if not session.id? or not session.role?
+      ###
+      TODO TRACKING: Error
+      ###
       reject 'No user id nor role'
     # Check origin against allowed values list
     else if request.origin not in allowed
+      ###
+      TODO TRACKING: Error
+      ###
       reject 'Invalid Origin'
     else
       session.id = parseInt session.id

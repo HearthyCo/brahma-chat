@@ -37,5 +37,14 @@ config =
     client: [ 'blue', 'purple', 'plum', 'orange' ]
     professional: [ 'red', 'green', 'magenta' ]
   options: options
+  # Keen
+  appName: 'client'
+  keenProjectId: '568e343f59949a717d66f555'
+  keenWriteKey: 'b5ed36456092145dc8e0be063fbe617c146bcf0\
+cafc7f30b2fe02bcc952000328b549cf8368d7113d0b8dde747cf51f\
+18ada5497ff75be2c3e6c9c2d909a920185653b12558750444d2c715\
+7fef031eb37b9e9232a6515529cb7660adbcec6a37b3523b8c6d3d33\
+32394431d253f887b'
+
 
 module.exports = exports = config

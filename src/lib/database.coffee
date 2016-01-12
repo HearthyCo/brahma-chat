@@ -21,6 +21,7 @@ crud = (dbObj) ->
   # collection
   getIds: -> Object.keys(dbObj) #.map (id) -> parseInt id
   getAll: -> dbObj
+  count: -> Object.keys(dbObj)?.length or 0
   get: (id = @id) -> dbObj[id] or []
   set: (id, content) ->
     if arguments.length is 1
@@ -84,6 +85,7 @@ database = do ->
         delete users[userId]
       get: (userId) ->
         users[userId]
+      count: -> Object.keys(users)?.length or 0
       has: (userId) ->
         return if users[userId] then true else false
       getIds: -> Object.keys(users).map (id) -> parseInt id
@@ -106,6 +108,14 @@ database = do ->
   iface.users.getProfessionals = ->
     (id for id, info of users when info.role is 'professional')
 
+  # Get connected clients count
+  iface.users.countClients = ->
+    iface.users.getClients()?.length
+
+  # Get connected clients list
+  iface.users.getClients = ->
+    (id for id, info of users when info.role is 'client')
+
   # Get sockets from sessionId
   iface.sessionUsers.getSockets = (id) ->
     online = iface.sessionUsers.getConnStates(id).online
@@ -125,7 +135,7 @@ database = do ->
       offline: offline
     }
 
-  # Get professional's userIds
+  # Get professional's sockets
   iface.userSockets.getProfessionals = ->
     professionals = (id for id, info of users when info.role is 'professional')
     sockets = []
@@ -134,7 +144,7 @@ database = do ->
         sockets.push socket
     sockets
 
-  # Get client's userIds
+  # Get client's sockets
   iface.userSockets.getClients = ->
     clients = (id for id, info of users when info.role is 'client')
     sockets = []
