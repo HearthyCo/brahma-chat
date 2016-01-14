@@ -135,6 +135,21 @@ database = do ->
       offline: offline
     }
 
+  # Get userIds online/offline in sessionId
+  iface.sessionUsers.getUserRoles = (id) ->
+    allowed = iface.sessionUsers.get id
+    _users = {}
+    for userId in allowed
+      user = iface.users.get userId
+      # More than one
+      if _users[user.role]
+        _users[user.role].push userId
+      # First
+      else
+        _users[user.role] = [ userId ]
+    _users.all = allowed
+    _users
+
   # Get professional's sockets
   iface.userSockets.getProfessionals = ->
     professionals = (id for id, info of users when info.role is 'professional')

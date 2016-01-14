@@ -46,6 +46,15 @@ module.exports = Tracking =
 
   trackMessage: (umc) ->
     message = umc.message
+    # Session stats
+    _sessionRoles = Database.sessionUsers.getUserRoles message.session
+    _sessionUsers = count: {}
+    for role, _users of _sessionRoles
+      if _sessionRoles[role].length > 1
+        _sessionUsers[role] = _users
+      else
+        _sessionUsers[role] = _users[0]
+      _sessionUsers.count[role] = _users.length
     # Keen tracking
     data =
       user:
@@ -53,6 +62,7 @@ module.exports = Tracking =
         role: umc.user.role
       session:
         id: message.session
+        users: _sessionUsers
       message:
         id: message.id
         type: message.type
