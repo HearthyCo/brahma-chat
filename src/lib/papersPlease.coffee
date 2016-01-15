@@ -25,10 +25,26 @@ papersPlease =
     session = request.cookies.filter((i) -> i.name is 'PLAY_SESSION')[0]?.value
     session = SessionReader session
     allowed = [
-      'http://localhost:3000'
-      'http://localhost:3002'
-      'http://mp-doctor.byglue.me'
-      'file://'
+      "http://localhost:8789",
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+      "http://localhost:3004",
+      "http://localhost:4000",
+      "http://mp-panel.dev01.glue.gl",
+      "http://mp-doctor.dev01.glue.gl",
+      "http://mp-client.dev01.glue.gl",
+      "http://mp-panel.byglue.me",
+      "http://mp-doctor.byglue.me",
+      "http://mp-client.byglue.me",
+      "https://mp-panel.byglue.me",
+      "https://mp-doctor.byglue.me",
+      "https://mp-client.byglue.me",
+      "https://mp-client-pro.byglue.me",
+      "https://chat-panel.medipremium.com",
+      "https://chat-doctor.medipremium.com",
+      "file://"
     ]
     if not session.id? or not session.role?
       ###
