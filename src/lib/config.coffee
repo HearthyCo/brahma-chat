@@ -39,12 +39,22 @@ config =
   options: options
   # Keen
   appName: 'client'
-  keenProjectId: '56960698672e6c74d2303b30'
-  keenWriteKey: 'aefd4f2122af136a7aab07471d084a4a2\
+
+if process.env.NODE_ENV is 'production'
+  config.keenProjectId = '56960698672e6c74d2303b30'
+  config.keenWriteKey = 'aefd4f2122af136a7aab07471d084a4a2\
 b590001a608502b4550b9c2133e5afda4\
 8bd6d173ca9e5eb24891361913d264061\
 ed14d758d85e22a2481af6208b160dfc4\
 200adab2954b40412fb3c19b0e12664f3\
 99a65f990e6619b41f0bf81b540'
+else
+  config.keenProjectId = '5698e31dd2eaaa60d75fd16d'
+  config.keenWriteKey = '3b4d8464ade65a68b9095781a7c34cef6\
+9191a06a3548aa607da745bcf84a52de2\
+1a40d0857504a7ac1a5fb7df498205036\
+917fcb7eed0cd3a2245aa81838ef30e93\
+26be496ae6267830fc1b0f400f50b37e5\
+eaec2a3bd19bde543892e6362b2'
 
 module.exports = exports = config
