@@ -153,7 +153,7 @@ module.exports = actions =
           "userSessions:",
           Database.userSessions.get(user.id)
       else
-        multi.lrange ("session_#{userSession}"), 0, -1
+        multi.lrange ("session_#{userSession}"), -41, -1
         multi.get ("userStatus_#{user.id}_#{userSession}")
         queries.push userSession
 

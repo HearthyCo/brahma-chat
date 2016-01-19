@@ -43,7 +43,7 @@ module.exports = manager = (umc) ->
         eventHandler.trigger 'connect', null, umc
 
     # JOIN
-    when 'join'
+    when 'join', 'load'
       PapersPlease.join umc
       .then ->
         eventHandler.trigger 'join', null, umc
