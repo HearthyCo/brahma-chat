@@ -141,12 +141,13 @@ database = do ->
     _users = {}
     for userId in allowed
       user = iface.users.get userId
-      # More than one
-      if _users[user.role]
-        _users[user.role].push userId
-      # First
-      else
-        _users[user.role] = [ userId ]
+      if user
+        # More than one
+        if _users[user.role]
+          _users[user.role].push userId
+        # First
+        else
+          _users[user.role] = [ userId ]
     _users.all = allowed
     _users
 
