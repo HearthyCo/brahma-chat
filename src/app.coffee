@@ -38,6 +38,9 @@ Chat.on 'broadcast', (err, data) ->
   if data and data.undelivered
     amqp.publish 'chat.activity', data
 
+Chat.on ['unreadDisconnect'], 'unreadDisconnect', (err, data) ->
+  amqp.publish 'chat.unread', data
+
 Chat.on '*', (evt) ->
   console.log LOG, "Chat event [#{evt}] triggered"
 

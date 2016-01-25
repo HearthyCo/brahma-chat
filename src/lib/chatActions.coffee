@@ -227,5 +227,29 @@ module.exports = actions =
     for socket in sockets
       socket.sendUTF JSON.stringify message
 
+  # Check if a user which just disconnected has unread messages
+  checkUnreadDisconnect: (user) ->
+    multi = redisClient.multi()
+    queries = []
+    for userSession in Database.userSessions.get user.id
+        multi.lrange ("session_#{userSession}"), -1, -1
+        multi.get ("userStatus_#{user.id}_#{userSession}")
+        queries.push userSession
+
+    multi.exec (err, results) ->
+      unreadSessions = 0
+      if not err
+        logs  = (v for v in results by 2)
+        status = (v for v in results[1..] by 2)
+        for result, i in logs
+          if result.length
+            msg = JSON.parse result[0]
+            sessionStatus = JSON.parse status[i]
+            if msg.id isnt sessionStatus.read
+              unreadSessions++
+      if unreadSessions
+        eventHandler.trigger 'unreadDisconnect', null,
+          user: user.id, unreadSessions: unreadSessions
+
 actions.on = eventHandler.on
 actions.off = eventHandler.off

@@ -87,6 +87,8 @@ module.exports = connect = (request, session, MessageManager) ->
           Chat.updateProfessionalList(
             null, Config.options.allowProfessionalList or false
           )
+        # If he has unread messages, send him a reminder
+        Chat.checkUnreadDisconnect user
 
       # Tracking
       try
