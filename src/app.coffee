@@ -64,6 +64,16 @@ MessageManager.on ['status'], 'statusUpdate', (err, data) ->
   msg = data.message
   Chat.updateUserSessionStatus data.user.id, msg.session, msg.data
 
+MessageManager.on ['away'], 'awayUpdate', (err, data) ->
+  data.user.isAway = data.message.data.isAway
+  console.log data.user
+  Chat.updateProfessionalList(
+    null, Config.options.allowProfessionalList or false
+  )
+  Chat.updateSelfStatus(
+    data.user
+  )
+
 MessageManager.on ['connect'], 'loadSessions', (err, data) ->
   Chat.loadSessions data.user, data.message.id if not err
   if data.user.role is 'professional'

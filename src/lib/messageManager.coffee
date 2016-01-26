@@ -82,6 +82,11 @@ module.exports = manager = (umc) ->
       .then ->
         eventHandler.trigger 'status', null, umc
 
+    # AWAY UPDATE
+    when 'away'
+      eventHandler.trigger 'away', null, umc
+      When.resolve null
+
     else
       console.error LOG, "@#{user?.id or '?'} ##{message.session or '?'}",
         "Invalid type: #{message.type}",

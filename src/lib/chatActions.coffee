@@ -195,17 +195,46 @@ module.exports = actions =
 
   # Send online professionals list update
   updateProfessionalList: (conn, includeList = false) ->
+    misc = []
     sockets = if conn then [conn] else Database.userSockets.getClients()
     professionals = Database.users.getProfessionals()
+
     miscEntry =
       id: 'professionalsOnline'
       count: professionals.length
     miscEntry.list = professionals if includeList
+    misc.push miscEntry
+
+    professionalsAway = Database.users.getProfessionalsAway()
+    miscEntry =
+      id: 'professionalsAway'
+      count: professionalsAway.length
+    miscEntry.list = professionalsAway if includeList
+    misc.push miscEntry
+
     msg =
       id: null
       type: 'update'
       status: 1000
-      data: misc: [miscEntry]
+      data: misc: misc
+    actions.notice msg, sockets
+
+  # Gives a user his own away status
+  updateSelfStatus: (user) ->
+    misc = []
+    sockets = Database.userSockets.get user.id
+
+    miscEntry =
+      id: 'professionalsAway'
+      count: if user.isAway then 1 else 0
+      list: if user.isAway then [user.id] else []
+    misc.push miscEntry
+
+    msg =
+      id: null
+      type: 'update'
+      status: 1000
+      data: misc: misc
     actions.notice msg, sockets
 
   # Update user-session status

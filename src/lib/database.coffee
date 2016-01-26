@@ -108,6 +108,10 @@ database = do ->
   iface.users.getProfessionals = ->
     (id for id, info of users when info.role is 'professional')
 
+  # Get connected but away professionals list
+  iface.users.getProfessionalsAway = ->
+    (id for id, info of users when info.isAway)
+
   # Get connected clients count
   iface.users.countClients = ->
     iface.users.getClients()?.length
