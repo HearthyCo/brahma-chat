@@ -2,6 +2,9 @@
 
 require('better-console-log')()
 
+if process.env.NODE_ENV is 'production'
+  console.log = ->
+
 process.on "uncaughtException", (err) ->
   console.error "uncaughtException", (err.stack or err)
 
@@ -193,7 +196,7 @@ server = http.createServer (request, response) ->
   response.end()
 
 server.listen Config.ws.port, ->
-  console.log LOG, "Server is listening on port #{Config.ws.port}"
+  console.info LOG, "Server is listening on port #{Config.ws.port}"
 
 wsServer = new WebSocketServer(
   httpServer: server,
