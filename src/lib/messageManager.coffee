@@ -37,7 +37,7 @@ module.exports = manager = (umc) ->
         user.id = umc.user.id
         user.role = umc.user.role
         # Add user
-        Database.users.add user
+        umc.user = user = Database.users.add user
         # Add socket to user socket list
         Database.userSockets.add user.id, connection
         eventHandler.trigger 'connect', null, umc
