@@ -180,6 +180,17 @@ amqp.on 'sessions.pools', 'broadcast', (err, data) ->
     data: servicetypes: data.servicetypes
   Chat.notice msg, Database.userSockets.getProfessionals()
 
+amqp.on 'update', 'broadcast', (err, data) ->
+  msg =
+    id: null
+    type: 'update'
+    status: 1000
+    data: data.data
+  targets = null
+  if not data.broadcast and data.targets
+    targets = data.targets
+  Chat.sendUpdate msg, targets
+
 amqp.on '*', (evt) ->
   console.log LOG, "amqp event [#{evt}] triggered"
 

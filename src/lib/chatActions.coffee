@@ -34,7 +34,7 @@ module.exports = actions =
 
       eventHandler.trigger 'connect', err, {}
 
-  # Broadcasts a message to every socket,
+  # Broadcasts a message to every session's socket,
   # except the specific ones passed on except
   broadcast: (message, except) ->
     console.error LOG, "Error: Connect first" if not redisClient
@@ -72,6 +72,18 @@ module.exports = actions =
     for socket in sockets
       socket.sendUTF JSON.stringify message
 
+    eventHandler.trigger 'notice', null, {}
+
+  # Broadcasts a notice to every socket
+  sendUpdate: (message, userIds) ->
+    console.error LOG, "Error: Connect first" if not redisClient
+
+    # Send it to the users
+    if not userIds
+      userIds = _.keys Database.users.getAll()
+    for userId in userIds
+      for socket in Database.userSockets.get userId
+        socket.sendUTF JSON.stringify message
     eventHandler.trigger 'notice', null, {}
 
   # Kick one or more users from session, userIds are optional

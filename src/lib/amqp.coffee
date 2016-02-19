@@ -11,7 +11,7 @@ module.exports = amqp =
   keys: [
     'chat.attachment'
     'session.close', 'session.finish', 'session.users'
-    'sessions.users', 'sessions.pools'
+    'sessions.users', 'sessions.pools', 'update'
   ]
 
   _reconnections: 0
