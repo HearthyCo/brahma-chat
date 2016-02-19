@@ -261,9 +261,9 @@ module.exports = actions =
     multi = redisClient.multi()
     queries = []
     for userSession in Database.userSessions.get user.id
-        multi.lrange ("session_#{userSession}"), -1, -1
-        multi.get ("userStatus_#{user.id}_#{userSession}")
-        queries.push userSession
+      multi.lrange ("session_#{userSession}"), -1, -1
+      multi.get ("userStatus_#{user.id}_#{userSession}")
+      queries.push userSession
 
     multi.exec (err, results) ->
       unreadSessions = 0

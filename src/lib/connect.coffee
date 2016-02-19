@@ -14,21 +14,24 @@ module.exports = connect = (request, session, MessageManager) ->
   connection = request.accept null, request.origin
   index = Database.connections.add connection
 
-  user =
+  tmpUser =
     id: session.id
     role: session.role
+  user = null
 
   console.log LOG, "Connection #{connection.remoteAddress} accepted."
 
   # Send fake message with type connect
-  _umc = user: user, connection: connection, message: type: 'connect'
+  _umc = user: tmpUser, connection: connection, message: type: 'connect'
   MessageManager _umc
+  .then ->
+    user = Database.users.get tmpUser.id
 
-  # Tracking
-  try
-    Tracking.trackConnection user, 1
-  catch ex
-    console.error LOG, "Tracking connect exception:", (ex?.stack or ex)
+    # Tracking
+    try
+      Tracking.trackConnection user, 1
+    catch ex
+      console.error LOG, "Tracking connect exception:", (ex?.stack or ex)
 
   connection.on 'message', (messageString) ->
     # check if messageString is valid

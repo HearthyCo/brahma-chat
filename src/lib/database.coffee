@@ -79,7 +79,9 @@ database = do ->
 
     users:
       add: (user) ->
-        users[user.id] = user
+        if not users[user.id]
+          users[user.id] = user
+        users[user.id]
       remove: (userId) ->
         users[userId] = undefined
         delete users[userId]

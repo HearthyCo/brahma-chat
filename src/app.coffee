@@ -83,6 +83,7 @@ MessageManager.on ['connect'], 'loadSessions', (err, data) ->
     Chat.updateProfessionalList(
       null, Config.options.allowProfessionalList or false
     )
+    Chat.updateSelfStatus data.user
   else
     Chat.updateProfessionalList(
       data.connection, Config.options.allowProfessionalList or false
