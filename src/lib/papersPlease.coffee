@@ -44,6 +44,10 @@ papersPlease =
       "https://mp-client-pro.byglue.me",
       "https://chat-panel.medipremium.com",
       "https://chat-doctor.medipremium.com",
+      "http://professional.demo.hearthy.co",
+      "http://client.demo.hearthy.co",
+      "https://professional.demo.hearthy.co",
+      "https://client.demo.hearthy.co",
       "file://"
     ]
     if not session.id? or not session.role?
