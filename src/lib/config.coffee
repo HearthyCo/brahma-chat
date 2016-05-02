@@ -32,7 +32,7 @@ config =
     url: URL.format amqp_url
     host: amqp_url.hostname
     port: amqp_url.port
-  secret: 'will grandfather hurt spider'
+  secret: process.env.SECRET or 'will grandfather hurt spider'
   colors:
     client: [ 'blue', 'purple', 'plum', 'orange' ]
     professional: [ 'red', 'green', 'magenta' ]
